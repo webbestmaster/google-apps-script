@@ -1,0 +1,31 @@
+{
+  "name": "google-apps-script",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "clasp": "clasp",
+    "clasp-login": "clasp login",
+    "clasp-create": "clasp create test-app",
+    "clasp-push": "clasp push --watch",
+    "clasp-versions": "clasp versions",
+    "clasp-deploy": "clasp deploy 1",
+    "tsc:watch": "tsc -p ./tsconfig.json --watch",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/webbestmaster/google-apps-script.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/webbestmaster/google-apps-script/issues"
+  },
+  "homepage": "https://github.com/webbestmaster/google-apps-script#readme",
+  "dependencies": {
+    "@google/clasp": "^2.4.2",
+    "@types/google-apps-script": "^1.0.56",
+    "typescript": "^4.8.4"
+  }
+}
