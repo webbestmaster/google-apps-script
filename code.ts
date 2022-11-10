@@ -6,7 +6,7 @@ const user = 'Grant';
 Logger.log(greeter(user));
 
 const ui = SpreadsheetApp.getUi();
-const response = ui.prompt('Getting to know you', 'May I know your name?', ui.ButtonSet.YES_NO);
+const response: GoogleAppsScript.Base.PromptResponse = ui.prompt('Getting to know you', 'May I know your name?', ui.ButtonSet.YES_NO);
 
 if (response.getSelectedButton() == ui.Button.YES) {
     Logger.log('The user\'s name is %s.', response.getResponseText());
