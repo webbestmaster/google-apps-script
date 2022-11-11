@@ -10,7 +10,14 @@
     "clasp-push": "clasp push --watch",
     "clasp-versions": "clasp versions",
     "clasp-deploy": "clasp deploy 1",
+    "check": "npm run ts-coverage && npm run tsc && npm run eslint",
+    "check:fix": "npm run prettier && npm run ts-coverage && npm run tsc && npm run eslint:fix",
+    "eslint": "eslint .",
+    "eslint:fix": "eslint . --fix",
+    "prettier": "prettier --write \"./**/*.(js|ts|tsx)\" --loglevel warn",
+    "tsc": "tsc -p ./tsconfig.json",
     "tsc:watch": "tsc -p ./tsconfig.json --watch",
+    "ts-coverage": "typescript-coverage-report --threshold=100 --strict=true --project ./src",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -25,7 +32,28 @@
   "homepage": "https://github.com/webbestmaster/google-apps-script#readme",
   "dependencies": {
     "@google/clasp": "^2.4.2",
-    "@types/google-apps-script": "^1.0.56",
-    "typescript": "^4.8.4"
+    "@types/google-apps-script": "^1.0.56"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^5.42.1",
+    "@typescript-eslint/parser": "^5.42.1",
+    "eslint": "^8.27.0",
+    "eslint-import-resolver-typescript": "^3.5.2",
+    "eslint-plugin-babel": "^5.3.1",
+    "eslint-plugin-filenames": "^1.3.2",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-jsx-a11y": "^6.6.1",
+    "eslint-plugin-no-loops": "^0.3.0",
+    "eslint-plugin-no-use-extend-native": "^0.5.0",
+    "eslint-plugin-optimize-regex": "^1.2.1",
+    "eslint-plugin-promise": "^6.1.1",
+    "eslint-plugin-react": "^7.31.10",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-sonarjs": "^0.16.0",
+    "eslint-plugin-typescript-sort-keys": "^2.1.0",
+    "eslint-plugin-unicorn": "^44.0.2",
+    "prettier": "^2.7.1",
+    "typescript": "^4.8.4",
+    "typescript-coverage-report": "^0.6.4"
   }
 }
