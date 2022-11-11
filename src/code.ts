@@ -1,5 +1,6 @@
 /* global Logger, SpreadsheetApp, GoogleAppsScript */
-function greeter(person: string): string {
+
+export function greeter(person: string): string {
     return `Hello, ${person}!`;
 }
 
