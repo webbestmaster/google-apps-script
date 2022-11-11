@@ -1,12 +1,12 @@
-/* global describe, it, expect */
+import {describe, expect, test} from '@jest/globals';
 
 // import {greeter} from './code';
 
 describe('some test', () => {
-    it('just test', async () => {
+    test('just test', async () => {
         expect(1 + 1).toEqual(2);
     });
-    it('test greeter', async () => {
+    test('test greeter', async () => {
         // expect(greeter('user')).toEqual(2);
     });
 });
