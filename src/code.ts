@@ -1,7 +1,7 @@
 /* global Logger, SpreadsheetApp, GoogleAppsScript */
 
 export function greeter(person: string): string {
-    return `Hello, ${person}!`;
+    return `Hello, ${person}!!!`;
 }
 
 const user = 'Grant';
