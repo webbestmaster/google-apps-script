@@ -22,3 +22,38 @@ if (response.getSelectedButton() === appUI.Button.YES) {
 } else {
     Logger.log("The user clicked the close button in the dialog's title bar.");
 }
+
+// not tested - set cell's value
+SpreadsheetApp.getActiveSpreadsheet().getActiveSheet().getRange("a1").setValue("w   ");
+
+// not tested - add UI
+const appUI2 = SpreadsheetApp.getUi();
+const menu: GoogleAppsScript.Base.Menu = appUI2.createMenu("My menu")
+function onButtonClick() {
+    Logger.log("onButtonClick!!!")
+}
+
+appUI2.alert("appUI2.alert");
+
+menu.addItem("My button", "onButtonClick");
+menu.addToUi();
+
+// will call on document open
+function onOpen() {
+    Logger.log("will call on document open!!!")
+}
+
+class Person {
+    firstName: string;
+    lastName: string;
+    static age: number = 0;
+
+    constructor(firstName: string, lastName: string, age: number) {
+        this.firstName = firstName;
+        this.lastName = lastName;
+        Person.age = age;
+    }
+}
+
+const newP = new Person("dd", "ssd", 11);
+console.log(Person.age)
