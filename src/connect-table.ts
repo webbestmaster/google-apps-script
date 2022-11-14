@@ -11,10 +11,9 @@ type ConnectTableConfigType = Readonly<{
     requestTableId: string;
 }>;
 
-// eslint-disable-next-line unicorn/no-static-only-class
 class ConnectTable {
-    static managerTableIdList: Array<string> = [];
-    static requestTableId = '';
+    private static managerTableIdList: Array<string> = [];
+    private static requestTableId = '';
 
     static initialize(connectTableConfig: ConnectTableConfigType) {
         ConnectTable.requestTableId = connectTableConfig.requestTableId;
@@ -36,6 +35,7 @@ class ConnectTable {
         range.sort({ascending: true, column: 2});
 
         const anotherSheet: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.openById(managerTableId1);
+
         Logger.log(anotherSheet.getSheetName());
         // const appUI = SpreadsheetApp.getUi();
         // appUI.alert("pushDataToRequestTable");
