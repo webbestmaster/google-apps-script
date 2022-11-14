@@ -30,7 +30,13 @@ class ConnectTable {
             Logger.log(JSON.stringify(row));
         });
 
+        Logger.log(sheet.getSheetId());
+        Logger.log(sheet.getSheetName());
+
         range.sort({ascending: true, column: 2});
+
+        const anotherSheet: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.openById(managerTableId1);
+        Logger.log(anotherSheet.getSheetName());
         // const appUI = SpreadsheetApp.getUi();
         // appUI.alert("pushDataToRequestTable");
     }
