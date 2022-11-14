@@ -1,3 +1,4 @@
+/*
 import {describe, expect, test} from '@jest/globals';
 
 // import {greeter} from './code';
@@ -10,3 +11,6 @@ describe('some test', () => {
         // expect(greeter('user')).toEqual(2);
     });
 });
+*/
+
+console.log('test');

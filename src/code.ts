@@ -1,4 +1,5 @@
-/* global Logger, SpreadsheetApp, GoogleAppsScript */
+/*
+/!* global Logger, SpreadsheetApp, GoogleAppsScript *!/
 
 export function greeter(person: string): string {
     return `Hello, ${person}!!!`;
@@ -57,3 +58,6 @@ class Person {
 
 const newP = new Person("dd", "ssd", 11);
 console.log(Person.age)
+*/
+
+console.log('test');
