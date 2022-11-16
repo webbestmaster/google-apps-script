@@ -2,24 +2,53 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars, no-unused-vars */
 
-// TODO: fix it, make for any number
-function columnStringToNumber(columnString: string): number {
-    const list: Array<string> = 'abcdefghijklmnopqrstuvwxyz'.toUpperCase().split('');
+function columnStringToNumber(columnStringRaw: string): number {
+    const alphabet = 'abcdefghijklmnopqrstuvwxyz';
+    const alphabetLength: number = alphabet.length;
+    const list: Array<string> = [...alphabet.toUpperCase()];
+    const columnString = columnStringRaw.trim().toUpperCase();
 
-    if (columnString === '') {
-        throw new Error('columnStringToNumber: can not read empty string');
-    }
-
-    if (columnString.length === 1) {
-        return list.indexOf(columnString) + 1;
-    }
-
-    if (columnString.length === 2) {
-        return (list.indexOf(columnString[0]) + 1) * 26 + columnStringToNumber(columnString[1]);
-    }
-
+    return [...columnString].reverse().reduce<number>((sum: number, char: string, index: number) => {
+        return sum + (list.indexOf(char) + 1) * Math.pow(alphabetLength, index);
+    }, 0);
 }
 
+// max ZZ, i.e. 702
+function columnNumberToString(columnNumber: number): string {
+    const alphabet = 'abcdefghijklmnopqrstuvwxyz';
+    const alphabetLength: number = alphabet.length;
+    const list: Array<string> = [...alphabet.toUpperCase()];
+
+    if (columnNumber >= alphabetLength * (alphabetLength + 1)) {
+        return list[alphabetLength - 1] + list[alphabetLength - 1];
+    }
+
+    if (columnNumber < alphabetLength) {
+        return list[columnNumber - 1];
+    }
+
+    return list[Math.floor(columnNumber / alphabetLength) - 1] + list[(columnNumber % alphabetLength) - 1];
+}
+
+/*
+console.log(columnNumberToString(1));
+console.log(columnStringToNumber('a'));
+
+console.log(columnNumberToString(5));
+console.log(columnStringToNumber('e'));
+
+console.log(columnNumberToString(57));
+console.log(columnStringToNumber('be'));
+
+console.log(columnNumberToString(27));
+console.log(columnStringToNumber('aa'));
+
+console.log(columnNumberToString(700));
+console.log(columnStringToNumber('zx'));
+
+console.log(columnNumberToString(702));
+console.log(columnStringToNumber('zz'));
+*/
 
 function getRandomString(): string {
     const fromRandom = Math.random().toString(32).replace('0.', '');
@@ -34,16 +63,12 @@ const requestsTableId = '1E5BIjJ6cpFsSl9fVcBvt9x8Bk7-uhqrz64jFbmqg5GI';
 // first row with data
 const dataRowBegin = 3;
 const managerColumnBeginString = 'A';
-const managerColumnBeginNumber = 1;
 const managerColumnEndString = 'I';
-const managerColumnEndNumber = 9;
 const requestsColumnBeginString = 'J';
-const requestsColumnBeginNumber = 10;
 const requestsColumnEndString = 'T';
-const requestsColumnEndNumber = 21;
 const tableIdColumnName = 'AY';
 const firstColumnName = 'A';
-const rowIdColumnName = 'AZ'; // should be last column
+const rowIdColumnName = 'AZ';
 // const requestDataRange = 'E3:H';
 
 type ConnectTableConfigType = Readonly<{
@@ -59,10 +84,12 @@ class PushToRequestsTable {
         PushToRequestsTable.updateRowsId();
 
         // protect row id
+        /*
         const spreadsheetApp: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.getActive();
         const sheet: GoogleAppsScript.Spreadsheet.Sheet = spreadsheetApp.getActiveSheet();
 
         sheet.getRange(rowIdColumnName).protect().setDescription('Protected range.');
+*/
     }
 
     static updateRowsId() {
@@ -72,7 +99,7 @@ class PushToRequestsTable {
 
         // eslint-disable-next-line complexity
         range.getValues().forEach((row: Array<unknown>, index: number) => {
-            const columnId = String(row.pop() || '').trim();
+            const columnId = String(row[columnStringToNumber(rowIdColumnName) - 1] || '').trim();
             const rowNumber: number = index + dataRowBegin;
             const hasRowValue = row.join('').trim().length > 0;
             const cellIdRange = sheet.getRange(`${rowIdColumnName}${rowNumber.toString(10)}`);
@@ -106,6 +133,7 @@ class PushToRequestsTable {
         return range;
     }
 
+    // eslint-disable-next-line sonarjs/cognitive-complexity
     static pushDataToRequestTable() {
         const requestsSpreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.openById(requestsTableId);
         const requestsSheet: GoogleAppsScript.Spreadsheet.Sheet | null = requestsSpreadsheet.getSheetByName('requests');
@@ -123,35 +151,36 @@ class PushToRequestsTable {
 
         const managerRange: GoogleAppsScript.Spreadsheet.Range = PushToRequestsTable.getAllDataRange();
 
-        managerRange.getValues()
-            .forEach((managerRow: Array<unknown>, managerIndex: number) => {
-                const managerColumnId = String(managerRow.pop() || '').trim();
-                const managerRowNumber: number = managerIndex + dataRowBegin;
+        managerRange.getValues().forEach((managerRow: Array<unknown>, managerIndex: number) => {
+            const managerColumnId = String(managerRow[columnStringToNumber(rowIdColumnName) - 1] || '').trim();
+            const managerRowNumber: number = managerIndex + dataRowBegin;
 
-                let isRowUpdated = false;
-                // try to find needed row in requests table
-                requestsRange.getValues().forEach((requestsRow: Array<unknown>, requestsRowIndex: number) => {
-                    const requestsColumnId = String(requestsRow.pop() || '').trim();
-                    if (isRowUpdated) {
-                        return;
-                    }
+            let isRowUpdated = false;
+            // try to find needed row in requests table
 
-                    if (requestsColumnId === managerColumnId) {
-                        isRowUpdated = true;
+            requestsRange.getValues().forEach((requestsRow: Array<unknown>, requestsRowIndex: number) => {
+                const requestsColumnId = String(requestsRow.pop() || '').trim();
 
-                        managerRow.forEach((managerCellValue: unknown, managerCellValueIndex: number) => {
-                            const requestsCellIdRange = requestsSheet
-                                .getRange(`${rowIdColumnName}${requestsRowIndex.toString(10)}`);
+                if (isRowUpdated) {
+                    return;
+                }
 
-                            requestsCellIdRange.setValue('1');
-                        })
-                    }
+                if (requestsColumnId === managerColumnId) {
+                    isRowUpdated = true;
 
+                    managerRow.forEach((managerCellValue: unknown, managerCellValueIndex: number) => {
+                        const requestColumnName = columnNumberToString(managerCellValueIndex + 1);
+                        const requestRowNumber = requestsRowIndex + dataRowBegin;
 
-                });
+                        const requestsCellIdRange = requestsSheet.getRange(
+                            `${requestColumnName}${requestRowNumber.toString(10)}`
+                        );
 
-
+                        requestsCellIdRange.setValue(managerCellValue);
+                    });
+                }
             });
+        });
 
         // eslint-disable-next-line complexity
         requestsRange.getValues().forEach((row: Array<unknown>, index: number) => {
