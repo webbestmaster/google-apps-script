@@ -13,17 +13,50 @@ function columnStringToNumber(columnStringRaw: string): number {
     }, 0);
 }
 
-// max ZZ, i.e. 702
+// eslint-disable-next-line max-statements, complexity
 function columnNumberToString(columnNumber: number): string {
     const alphabet = 'abcdefghijklmnopqrstuvwxyz';
     const alphabetLength: number = alphabet.length;
     const list: Array<string> = [...alphabet.toUpperCase()];
+    const minColumnNumber = 1;
+    const maxColumnNumber = alphabetLength * (alphabetLength + 1);
+    const appUI = SpreadsheetApp.getUi();
 
-    if (columnNumber >= alphabetLength * (alphabetLength + 1)) {
+    if (Math.round(columnNumber) !== columnNumber) {
+        const errorMessage = `The column number is not integer. Column number is ${columnNumber.toString(
+            10
+        )}, but received ${minColumnNumber}.`;
+
+        appUI.alert(errorMessage);
+
+        throw new Error(errorMessage);
+    }
+
+    if (columnNumber < minColumnNumber) {
+        const errorMessage = `The column number is too small. Column number is ${columnNumber.toString(
+            10
+        )}, but min is ${minColumnNumber}.`;
+
+        appUI.alert(errorMessage);
+
+        throw new Error(errorMessage);
+    }
+
+    if (columnNumber > maxColumnNumber) {
+        const errorMessage = `The column number is too big. Column number is ${columnNumber.toString(
+            10
+        )}, but max is ${maxColumnNumber}.`;
+
+        appUI.alert(errorMessage);
+
+        throw new Error(errorMessage);
+    }
+
+    if (columnNumber === maxColumnNumber) {
         return list[alphabetLength - 1] + list[alphabetLength - 1];
     }
 
-    if (columnNumber < alphabetLength) {
+    if (columnNumber <= alphabetLength) {
         return list[columnNumber - 1];
     }
 
@@ -40,11 +73,17 @@ console.log(columnStringToNumber('e'));
 console.log(columnNumberToString(57));
 console.log(columnStringToNumber('be'));
 
+console.log(columnNumberToString(26));
+console.log(columnStringToNumber('z'));
+
 console.log(columnNumberToString(27));
 console.log(columnStringToNumber('aa'));
 
 console.log(columnNumberToString(700));
 console.log(columnStringToNumber('zx'));
+
+console.log(columnNumberToString(701));
+console.log(columnStringToNumber('zy'));
 
 console.log(columnNumberToString(702));
 console.log(columnStringToNumber('zz'));
@@ -68,6 +107,7 @@ const requestsColumnBeginString = 'J';
 const requestsColumnEndString = 'T';
 const tableIdColumnName = 'AY';
 const firstColumnName = 'A';
+const lastColumnName = 'AZ';
 const rowIdColumnName = 'AZ';
 // const requestDataRange = 'E3:H';
 
@@ -127,7 +167,7 @@ class PushToRequestsTable {
         const spreadsheetApp: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.getActive();
         const sheet: GoogleAppsScript.Spreadsheet.Sheet = spreadsheetApp.getActiveSheet();
         const range: GoogleAppsScript.Spreadsheet.Range = sheet.getRange(
-            `${firstColumnName}${dataRowBegin.toString(10)}:${rowIdColumnName}`
+            `${firstColumnName}${dataRowBegin.toString(10)}:${lastColumnName}`
         );
 
         return range;
@@ -146,7 +186,7 @@ class PushToRequestsTable {
         }
 
         const requestsRange: GoogleAppsScript.Spreadsheet.Range = requestsSheet.getRange(
-            `${firstColumnName}${dataRowBegin.toString(10)}:${rowIdColumnName}`
+            `${firstColumnName}${dataRowBegin.toString(10)}:${lastColumnName}`
         );
 
         const managerRange: GoogleAppsScript.Spreadsheet.Range = PushToRequestsTable.getAllDataRange();
@@ -229,7 +269,7 @@ class PushToRequestsTable {
 
     static makeUiMenu() {
         const appUI = SpreadsheetApp.getUi();
-        const menu: GoogleAppsScript.Base.Menu = appUI.createMenu('Push data');
+        const menu: GoogleAppsScript.Base.Menu = appUI.createMenu('Push data to requests table');
 
         menu.addItem('push to requests table', 'PushToRequestsTable.pushDataToRequestTable');
         menu.addToUi();
