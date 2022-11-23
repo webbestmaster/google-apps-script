@@ -189,6 +189,11 @@ const pushToRequestsTable = {
 
         managerRange.getValues().forEach((managerRow: Array<unknown>) => {
             const managerColumnId = String(managerRow[columnStringToNumber(rowIdColumnName) - 1] || '').trim();
+
+            if (!managerColumnId) {
+                return;
+            }
+
             const requestsRange: GoogleAppsScript.Spreadsheet.Range = pushToRequestsTable.getAllRequestsDataRange();
 
             const requestsRangeRowIndex: number = requestsRange
