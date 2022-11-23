@@ -18,6 +18,7 @@ function columnNumberToString(columnNumber: number): string {
     const alphabet = 'abcdefghijklmnopqrstuvwxyz';
     const alphabetLength: number = alphabet.length;
     const list: Array<string> = [...alphabet.toUpperCase()];
+    const lastLetter = list[alphabetLength - 1];
     const minColumnNumber = 1;
     const maxColumnNumber = alphabetLength * (alphabetLength + 1);
     const appUI = SpreadsheetApp.getUi();
@@ -49,11 +50,11 @@ function columnNumberToString(columnNumber: number): string {
     }
 
     if (columnNumber === maxColumnNumber) {
-        return list[alphabetLength - 1] + list[alphabetLength - 1];
+        return lastLetter + lastLetter;
     }
 
     if (columnNumber <= alphabetLength) {
-        return list[columnNumber - 1];
+        return lastLetter;
     }
 
     return list[Math.floor(columnNumber / alphabetLength) - 1] + list[(columnNumber % alphabetLength) - 1];
@@ -94,30 +95,76 @@ function getRandomString(): string {
 
 // main constants
 const requestsTableId = '1E5BIjJ6cpFsSl9fVcBvt9x8Bk7-uhqrz64jFbmqg5GI';
+const requestsSheetName = 'requests';
 
 // first row with data
 const dataRowBegin = 3;
-const managerColumnBeginString = 'A';
-const managerColumnEndString = 'I';
-const requestsColumnBeginString = 'J';
-const requestsColumnEndString = 'T';
-const tableIdColumnName = 'AY';
 const firstColumnName = 'A';
 const lastColumnName = 'AZ';
+
+const managerColumnBeginString = 'A';
+const managerColumnEndString = 'I';
+
+const requestsColumnBeginString = 'J';
+const requestsColumnEndString = 'T';
+
+const commonColumnBeginString = 'J';
+const commonColumnEndString = 'T';
+
+const tableIdColumnName = 'AY';
 const rowIdColumnName = 'AZ';
 // const requestDataRange = 'E3:H';
 
-type ConnectTableConfigType = Readonly<{
-    requestsTableId: string;
-}>;
+const pushToRequestsTable = {
+    getAllDataRange(): GoogleAppsScript.Spreadsheet.Range {
+        const spreadsheetApp: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.getActive();
+        const sheet: GoogleAppsScript.Spreadsheet.Sheet = spreadsheetApp.getActiveSheet();
+        const range: GoogleAppsScript.Spreadsheet.Range = sheet.getRange(
+            `${firstColumnName}${dataRowBegin}:${lastColumnName}`
+        );
 
-class PushToRequestsTable {
-    private static requestsTableId = '';
+        return range;
+    },
 
-    static initialize(connectTableConfig: ConnectTableConfigType) {
-        PushToRequestsTable.requestsTableId = connectTableConfig.requestsTableId;
-        PushToRequestsTable.makeUiMenu();
-        PushToRequestsTable.updateRowsId();
+    getAllRequestsDataRange(): GoogleAppsScript.Spreadsheet.Range {
+        const requestsSheet = pushToRequestsTable.getRequestsSheet();
+
+        const requestsRange: GoogleAppsScript.Spreadsheet.Range = requestsSheet.getRange(
+            `${firstColumnName}${dataRowBegin}:${lastColumnName}`
+        );
+
+        return requestsRange;
+    },
+
+    getRequestsRange(a1Notation: string): GoogleAppsScript.Spreadsheet.Range {
+        const requestsSheet: GoogleAppsScript.Spreadsheet.Sheet | null = pushToRequestsTable.getRequestsSheet();
+
+        const requestsRange: GoogleAppsScript.Spreadsheet.Range = requestsSheet.getRange(a1Notation);
+
+        return requestsRange;
+    },
+
+    getRequestsSheet(): GoogleAppsScript.Spreadsheet.Sheet {
+        const requestsSpreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.openById(requestsTableId);
+        const requestsSheet: GoogleAppsScript.Spreadsheet.Sheet | null =
+            requestsSpreadsheet.getSheetByName(requestsSheetName);
+
+        const appUI: GoogleAppsScript.Base.Ui = SpreadsheetApp.getUi();
+
+        if (!requestsSheet) {
+            const errorMessage = '[getRequestsSheet]: Can not requests table and/or requests sheet.';
+
+            appUI.alert(errorMessage);
+
+            throw new Error(errorMessage);
+        }
+
+        return requestsSheet;
+    },
+
+    initialize() {
+        pushToRequestsTable.makeUiMenu();
+        pushToRequestsTable.updateRowsId();
 
         // protect row id
         /*
@@ -126,121 +173,66 @@ class PushToRequestsTable {
 
         sheet.getRange(rowIdColumnName).protect().setDescription('Protected range.');
 */
-    }
+    },
 
-    static updateRowsId() {
-        const range = PushToRequestsTable.getAllDataRange();
-        const spreadsheetApp: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.getActive();
-        const sheet: GoogleAppsScript.Spreadsheet.Sheet = spreadsheetApp.getActiveSheet();
+    makeUiMenu() {
+        const appUI = SpreadsheetApp.getUi();
+        const menu: GoogleAppsScript.Base.Menu = appUI.createMenu('Push data to requests table');
 
-        // eslint-disable-next-line complexity
-        range.getValues().forEach((row: Array<unknown>, index: number) => {
-            const columnId = String(row[columnStringToNumber(rowIdColumnName) - 1] || '').trim();
-            const rowNumber: number = index + dataRowBegin;
-            const hasRowValue = row.join('').trim().length > 0;
-            const cellIdRange = sheet.getRange(`${rowIdColumnName}${rowNumber.toString(10)}`);
-
-            if (hasRowValue && columnId) {
-                return;
-            }
-
-            if (!hasRowValue && !columnId) {
-                return;
-            }
-
-            if (hasRowValue && !columnId) {
-                cellIdRange.setValue(getRandomString());
-                return;
-            }
-
-            if (!hasRowValue && columnId) {
-                cellIdRange.setValue('');
-            }
-        });
-    }
-
-    static getAllDataRange(): GoogleAppsScript.Spreadsheet.Range {
-        const spreadsheetApp: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.getActive();
-        const sheet: GoogleAppsScript.Spreadsheet.Sheet = spreadsheetApp.getActiveSheet();
-        const range: GoogleAppsScript.Spreadsheet.Range = sheet.getRange(
-            `${firstColumnName}${dataRowBegin.toString(10)}:${lastColumnName}`
-        );
-
-        return range;
-    }
+        menu.addItem('push to requests table', 'pushToRequestsTable.pushDataToRequestTable');
+        menu.addToUi();
+    },
 
     // eslint-disable-next-line sonarjs/cognitive-complexity
-    static pushDataToRequestTable() {
-        const requestsSpreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.openById(requestsTableId);
-        const requestsSheet: GoogleAppsScript.Spreadsheet.Sheet | null = requestsSpreadsheet.getSheetByName('requests');
+    pushDataToRequestTable() {
+        const managerRange: GoogleAppsScript.Spreadsheet.Range = pushToRequestsTable.getAllDataRange();
 
-        if (!requestsSheet) {
-            const appUI = SpreadsheetApp.getUi();
-
-            appUI.alert('!pushDataToRequestTable');
-            return;
-        }
-
-        const requestsRange: GoogleAppsScript.Spreadsheet.Range = requestsSheet.getRange(
-            `${firstColumnName}${dataRowBegin.toString(10)}:${lastColumnName}`
-        );
-
-        const managerRange: GoogleAppsScript.Spreadsheet.Range = PushToRequestsTable.getAllDataRange();
-
-        managerRange.getValues().forEach((managerRow: Array<unknown>, managerIndex: number) => {
+        managerRange.getValues().forEach((managerRow: Array<unknown>) => {
             const managerColumnId = String(managerRow[columnStringToNumber(rowIdColumnName) - 1] || '').trim();
-            const managerRowNumber: number = managerIndex + dataRowBegin;
+            const requestsRange: GoogleAppsScript.Spreadsheet.Range = pushToRequestsTable.getAllRequestsDataRange();
 
-            let isRowUpdated = false;
-            // try to find needed row in requests table
+            const requestsRangeRowIndex: number = requestsRange
+                .getValues()
+                .findIndex((requestsRow: Array<unknown>): boolean => {
+                    const requestsColumnId = String(
+                        requestsRow[columnStringToNumber(rowIdColumnName) - 1] || ''
+                    ).trim();
 
-            requestsRange.getValues().forEach((requestsRow: Array<unknown>, requestsRowIndex: number) => {
-                const requestsColumnId = String(requestsRow.pop() || '').trim();
+                    return requestsColumnId === managerColumnId;
+                });
 
-                if (isRowUpdated) {
+            if (requestsRangeRowIndex !== -1) {
+                managerRow.forEach((managerRowData: unknown, managerColumnIndex: number) => {
+                    const requestsRangeRowNumber: number = requestsRangeRowIndex + dataRowBegin;
+                    const startColumnNumber = columnStringToNumber(managerColumnBeginString);
+                    const endColumnNumber = columnStringToNumber(managerColumnEndString);
+                    const currentColumnNumber = managerColumnIndex + 1;
+
+                    if (currentColumnNumber < startColumnNumber && currentColumnNumber > endColumnNumber) {
+                        return;
+                    }
+
+                    pushToRequestsTable
+                        .getRequestsRange(`${columnNumberToString(currentColumnNumber)}${requestsRangeRowNumber}`)
+                        .setValue(managerRowData);
+                });
+
+                return;
+            }
+
+            managerRow.forEach((managerRowData: unknown, managerColumnIndex: number) => {
+                const startColumnNumber = columnStringToNumber(managerColumnBeginString);
+                const endColumnNumber = columnStringToNumber(managerColumnEndString);
+                const currentColumnNumber = managerColumnIndex + 1;
+
+                if (currentColumnNumber < startColumnNumber && currentColumnNumber > endColumnNumber) {
                     return;
                 }
 
-                if (requestsColumnId === managerColumnId) {
-                    isRowUpdated = true;
+                const requestsSheet = pushToRequestsTable.getRequestsSheet();
 
-                    managerRow.forEach((managerCellValue: unknown, managerCellValueIndex: number) => {
-                        const requestColumnName = columnNumberToString(managerCellValueIndex + 1);
-                        const requestRowNumber = requestsRowIndex + dataRowBegin;
-
-                        const requestsCellIdRange = requestsSheet.getRange(
-                            `${requestColumnName}${requestRowNumber.toString(10)}`
-                        );
-
-                        requestsCellIdRange.setValue(managerCellValue);
-                    });
-                }
+                requestsSheet.getRange(requestsSheet.getLastRow() + 1, currentColumnNumber).setValue(managerRowData);
             });
-        });
-
-        // eslint-disable-next-line complexity
-        requestsRange.getValues().forEach((row: Array<unknown>, index: number) => {
-            const columnId = String(row.pop() || '').trim();
-            const rowNumber: number = index + dataRowBegin;
-            const hasRowValue = row.join('').trim().length > 0;
-            const cellIdRange = requestsSheet.getRange(`${rowIdColumnName}${rowNumber.toString(10)}`);
-
-            if (hasRowValue && columnId) {
-                return;
-            }
-
-            if (!hasRowValue && !columnId) {
-                return;
-            }
-
-            if (hasRowValue && !columnId) {
-                cellIdRange.setValue('1');
-                return;
-            }
-
-            if (!hasRowValue && columnId) {
-                cellIdRange.setValue('2');
-            }
         });
 
         /*
@@ -261,23 +253,47 @@ class PushToRequestsTable {
         Logger.log('////////////////');
         // const appUI = SpreadsheetApp.getUi();
         // appUI.alert("pushDataToRequestTable");
-    }
+    },
 
-    static makeUiMenu() {
-        const appUI = SpreadsheetApp.getUi();
-        const menu: GoogleAppsScript.Base.Menu = appUI.createMenu('Push data to requests table');
+    updateRowsId() {
+        const range = pushToRequestsTable.getAllDataRange();
+        const spreadsheetApp: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.getActive();
+        const sheet: GoogleAppsScript.Spreadsheet.Sheet = spreadsheetApp.getActiveSheet();
 
-        menu.addItem('push to requests table', 'PushToRequestsTable.pushDataToRequestTable');
-        menu.addToUi();
-    }
-}
+        // eslint-disable-next-line complexity
+        range.getValues().forEach((row: Array<unknown>, index: number) => {
+            const columnId = String(row[columnStringToNumber(rowIdColumnName) - 1] || '').trim();
+            const rowNumber: number = index + dataRowBegin;
+            const hasRowValue = row.join('').trim().length > 0;
+            const cellIdRange = sheet.getRange(`${rowIdColumnName}${rowNumber}`);
+            // const cellTableIdRange = sheet.getRange(`${tableIdColumnName}${rowNumber}`);
+
+            if (hasRowValue && columnId) {
+                return;
+            }
+
+            if (!hasRowValue && !columnId) {
+                return;
+            }
+
+            if (hasRowValue && !columnId) {
+                cellIdRange.setValue(getRandomString());
+                return;
+            }
+
+            if (!hasRowValue && columnId) {
+                cellIdRange.setValue('');
+            }
+        });
+    },
+};
 
 // will call on document open
 // eslint-disable-next-line no-unused-vars, @typescript-eslint/no-unused-vars
 function onOpen() {
-    PushToRequestsTable.initialize({requestsTableId});
+    pushToRequestsTable.initialize();
 }
 
 function onEdit() {
-    PushToRequestsTable.updateRowsId();
+    pushToRequestsTable.updateRowsId();
 }
