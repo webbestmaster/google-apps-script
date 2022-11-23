@@ -195,6 +195,9 @@ const pushToRequestsTable = {
             }
 
             const requestsRange: GoogleAppsScript.Spreadsheet.Range = pushToRequestsTable.getAllRequestsDataRange();
+            const requestsSheet = pushToRequestsTable.getRequestsSheet();
+            const startColumnNumber = columnStringToNumber(managerColumnBeginString);
+            const endColumnNumber = columnStringToNumber(managerColumnEndString);
 
             const requestsRangeRowIndex: number = requestsRange
                 .getValues()
@@ -206,37 +209,17 @@ const pushToRequestsTable = {
                     return requestsColumnId === managerColumnId;
                 });
 
-            if (requestsRangeRowIndex !== -1) {
-                managerRow.forEach((managerRowData: unknown, managerColumnIndex: number) => {
-                    const requestsRangeRowNumber: number = requestsRangeRowIndex + dataRowBegin;
-                    const startColumnNumber = columnStringToNumber(managerColumnBeginString);
-                    const endColumnNumber = columnStringToNumber(managerColumnEndString);
-                    const currentColumnNumber = managerColumnIndex + 1;
-
-                    if (currentColumnNumber < startColumnNumber && currentColumnNumber > endColumnNumber) {
-                        return;
-                    }
-
-                    pushToRequestsTable
-                        .getRequestsRange(`${columnNumberToString(currentColumnNumber)}${requestsRangeRowNumber}`)
-                        .setValue(managerRowData);
-                });
-
-                return;
-            }
+            const requestsRangeRowNumber: number =
+                requestsRangeRowIndex === -1 ? requestsSheet.getLastRow() + 1 : requestsRangeRowIndex + dataRowBegin;
 
             managerRow.forEach((managerRowData: unknown, managerColumnIndex: number) => {
-                const startColumnNumber = columnStringToNumber(managerColumnBeginString);
-                const endColumnNumber = columnStringToNumber(managerColumnEndString);
                 const currentColumnNumber = managerColumnIndex + 1;
 
                 if (currentColumnNumber < startColumnNumber && currentColumnNumber > endColumnNumber) {
                     return;
                 }
 
-                const requestsSheet = pushToRequestsTable.getRequestsSheet();
-
-                requestsSheet.getRange(requestsSheet.getLastRow() + 1, currentColumnNumber).setValue(managerRowData);
+                requestsSheet.getRange(requestsRangeRowNumber, currentColumnNumber).setValue(managerRowData);
             });
         });
 
