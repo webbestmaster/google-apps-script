@@ -2,63 +2,93 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars, no-unused-vars */
 
-function columnStringToNumber(columnStringRaw: string): number {
-    const alphabet = 'abcdefghijklmnopqrstuvwxyz';
-    const alphabetLength: number = alphabet.length;
-    const list: Array<string> = [...alphabet.toUpperCase()];
-    const columnString = columnStringRaw.trim().toUpperCase();
+// main constants
+const requestsTableId = '1E5BIjJ6cpFsSl9fVcBvt9x8Bk7-uhqrz64jFbmqg5GI';
+const requestsSheetName = 'requests';
 
-    return [...columnString].reverse().reduce<number>((sum: number, char: string, index: number) => {
-        return sum + (list.indexOf(char) + 1) * Math.pow(alphabetLength, index);
-    }, 0);
-}
+// first row with data
+const dataRowBegin = 3;
+const firstColumnName = 'A';
+const lastColumnName = 'AZ';
 
-// eslint-disable-next-line max-statements, complexity
-function columnNumberToString(columnNumber: number): string {
-    const alphabet = 'abcdefghijklmnopqrstuvwxyz';
-    const alphabetLength: number = alphabet.length;
-    const list: Array<string> = [...alphabet.toUpperCase()];
-    const lastLetter = list[alphabetLength - 1];
-    const minColumnNumber = 1;
-    const maxColumnNumber = alphabetLength * (alphabetLength + 1);
-    const appUI = SpreadsheetApp.getUi();
+const managerColumnBeginString = 'A';
+const managerColumnEndString = 'I';
 
-    if (Math.round(columnNumber) !== columnNumber) {
-        const errorMessage = `The column number is not integer. Column number is ${columnNumber}`;
+const requestsColumnBeginString = 'J';
+const requestsColumnEndString = 'T';
 
-        appUI.alert(errorMessage);
+const commonColumnBeginString = 'J';
+const commonColumnEndString = 'T';
 
-        throw new Error(errorMessage);
-    }
+const tableIdColumnName = 'AY';
+const rowIdColumnName = 'AZ';
+// const requestDataRange = 'E3:H';
 
-    if (columnNumber < minColumnNumber) {
-        // eslint-disable-next-line max-len
-        const errorMessage = `The column number is too small. Column number is ${columnNumber}, but min is ${minColumnNumber}.`;
+const util = {
+    // eslint-disable-next-line max-statements, complexity
+    columnNumberToString(columnNumber: number): string {
+        const alphabet = 'abcdefghijklmnopqrstuvwxyz';
+        const alphabetLength: number = alphabet.length;
+        const list: Array<string> = [...alphabet.toUpperCase()];
+        const lastLetter = list[alphabetLength - 1];
+        const minColumnNumber = 1;
+        const maxColumnNumber = alphabetLength * (alphabetLength + 1);
+        const appUI = SpreadsheetApp.getUi();
 
-        appUI.alert(errorMessage);
+        if (Math.round(columnNumber) !== columnNumber) {
+            const errorMessage = `The column number is not integer. Column number is ${columnNumber}`;
 
-        throw new Error(errorMessage);
-    }
+            appUI.alert(errorMessage);
 
-    if (columnNumber > maxColumnNumber) {
-        // eslint-disable-next-line max-len
-        const errorMessage = `The column number is too big. Column number is ${columnNumber}, but max is ${maxColumnNumber}.`;
+            throw new Error(errorMessage);
+        }
 
-        appUI.alert(errorMessage);
+        if (columnNumber < minColumnNumber) {
+            // eslint-disable-next-line max-len
+            const errorMessage = `The column number is too small. Column number is ${columnNumber}, but min is ${minColumnNumber}.`;
 
-        throw new Error(errorMessage);
-    }
+            appUI.alert(errorMessage);
 
-    if (columnNumber === maxColumnNumber) {
-        return lastLetter + lastLetter;
-    }
+            throw new Error(errorMessage);
+        }
 
-    if (columnNumber <= alphabetLength) {
-        return lastLetter;
-    }
+        if (columnNumber > maxColumnNumber) {
+            // eslint-disable-next-line max-len
+            const errorMessage = `The column number is too big. Column number is ${columnNumber}, but max is ${maxColumnNumber}.`;
 
-    return list[Math.floor(columnNumber / alphabetLength) - 1] + list[(columnNumber % alphabetLength) - 1];
-}
+            appUI.alert(errorMessage);
+
+            throw new Error(errorMessage);
+        }
+
+        if (columnNumber === maxColumnNumber) {
+            return lastLetter + lastLetter;
+        }
+
+        if (columnNumber <= alphabetLength) {
+            return lastLetter;
+        }
+
+        return list[Math.floor(columnNumber / alphabetLength) - 1] + list[(columnNumber % alphabetLength) - 1];
+    },
+    // eslint-disable-next-line max-statements, complexity
+    columnStringToNumber(columnStringRaw: string): number {
+        const alphabet = 'abcdefghijklmnopqrstuvwxyz';
+        const alphabetLength: number = alphabet.length;
+        const list: Array<string> = [...alphabet.toUpperCase()];
+        const columnString = columnStringRaw.trim().toUpperCase();
+
+        return [...columnString].reverse().reduce<number>((sum: number, char: string, index: number) => {
+            return sum + (list.indexOf(char) + 1) * Math.pow(alphabetLength, index);
+        }, 0);
+    },
+    getRandomString(): string {
+        const fromRandom = Math.random().toString(32).replace('0.', '');
+        const fromTime = Date.now().toString(32);
+
+        return `${fromRandom}${fromTime}`.toLowerCase();
+    },
+};
 
 /*
 console.log(columnNumberToString(1));
@@ -85,35 +115,6 @@ console.log(columnStringToNumber('zy'));
 console.log(columnNumberToString(702));
 console.log(columnStringToNumber('zz'));
 */
-
-function getRandomString(): string {
-    const fromRandom = Math.random().toString(32).replace('0.', '');
-    const fromTime = Date.now().toString(32);
-
-    return `${fromRandom}${fromTime}`.toLowerCase();
-}
-
-// main constants
-const requestsTableId = '1E5BIjJ6cpFsSl9fVcBvt9x8Bk7-uhqrz64jFbmqg5GI';
-const requestsSheetName = 'requests';
-
-// first row with data
-const dataRowBegin = 3;
-const firstColumnName = 'A';
-const lastColumnName = 'AZ';
-
-const managerColumnBeginString = 'A';
-const managerColumnEndString = 'I';
-
-const requestsColumnBeginString = 'J';
-const requestsColumnEndString = 'T';
-
-const commonColumnBeginString = 'J';
-const commonColumnEndString = 'T';
-
-const tableIdColumnName = 'AY';
-const rowIdColumnName = 'AZ';
-// const requestDataRange = 'E3:H';
 
 const pushToRequestsTable = {
     getAllDataRange(): GoogleAppsScript.Spreadsheet.Range {
@@ -188,7 +189,7 @@ const pushToRequestsTable = {
         const managerRange: GoogleAppsScript.Spreadsheet.Range = pushToRequestsTable.getAllDataRange();
 
         managerRange.getValues().forEach((managerRow: Array<unknown>) => {
-            const managerColumnId = String(managerRow[columnStringToNumber(rowIdColumnName) - 1] || '').trim();
+            const managerColumnId = String(managerRow[util.columnStringToNumber(rowIdColumnName) - 1] || '').trim();
 
             if (!managerColumnId) {
                 return;
@@ -196,14 +197,14 @@ const pushToRequestsTable = {
 
             const requestsRange: GoogleAppsScript.Spreadsheet.Range = pushToRequestsTable.getAllRequestsDataRange();
             const requestsSheet = pushToRequestsTable.getRequestsSheet();
-            const startColumnNumber = columnStringToNumber(managerColumnBeginString);
-            const endColumnNumber = columnStringToNumber(managerColumnEndString);
+            const startColumnNumber = util.columnStringToNumber(managerColumnBeginString);
+            const endColumnNumber = util.columnStringToNumber(managerColumnEndString);
 
             const requestsRangeRowIndex: number = requestsRange
                 .getValues()
                 .findIndex((requestsRow: Array<unknown>): boolean => {
                     const requestsColumnId = String(
-                        requestsRow[columnStringToNumber(rowIdColumnName) - 1] || ''
+                        requestsRow[util.columnStringToNumber(rowIdColumnName) - 1] || ''
                     ).trim();
 
                     return requestsColumnId === managerColumnId;
@@ -250,7 +251,7 @@ const pushToRequestsTable = {
 
         // eslint-disable-next-line complexity
         range.getValues().forEach((row: Array<unknown>, index: number) => {
-            const columnId = String(row[columnStringToNumber(rowIdColumnName) - 1] || '').trim();
+            const columnId = String(row[util.columnStringToNumber(rowIdColumnName) - 1] || '').trim();
             const rowNumber: number = index + dataRowBegin;
             const hasRowValue = row.join('').trim().length > 0;
             const cellIdRange = sheet.getRange(`${rowIdColumnName}${rowNumber}`);
@@ -265,7 +266,7 @@ const pushToRequestsTable = {
             }
 
             if (hasRowValue && !columnId) {
-                cellIdRange.setValue(getRandomString());
+                cellIdRange.setValue(util.getRandomString());
                 return;
             }
 
@@ -277,7 +278,6 @@ const pushToRequestsTable = {
 };
 
 // will call on document open
-// eslint-disable-next-line no-unused-vars, @typescript-eslint/no-unused-vars
 function onOpen() {
     pushToRequestsTable.initialize();
 }
