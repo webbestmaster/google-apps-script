@@ -23,9 +23,7 @@ function columnNumberToString(columnNumber: number): string {
     const appUI = SpreadsheetApp.getUi();
 
     if (Math.round(columnNumber) !== columnNumber) {
-        const errorMessage = `The column number is not integer. Column number is ${columnNumber.toString(
-            10
-        )}, but received ${minColumnNumber}.`;
+        const errorMessage = `The column number is not integer. Column number is ${columnNumber}`;
 
         appUI.alert(errorMessage);
 
@@ -33,9 +31,8 @@ function columnNumberToString(columnNumber: number): string {
     }
 
     if (columnNumber < minColumnNumber) {
-        const errorMessage = `The column number is too small. Column number is ${columnNumber.toString(
-            10
-        )}, but min is ${minColumnNumber}.`;
+        // eslint-disable-next-line max-len
+        const errorMessage = `The column number is too small. Column number is ${columnNumber}, but min is ${minColumnNumber}.`;
 
         appUI.alert(errorMessage);
 
@@ -43,9 +40,8 @@ function columnNumberToString(columnNumber: number): string {
     }
 
     if (columnNumber > maxColumnNumber) {
-        const errorMessage = `The column number is too big. Column number is ${columnNumber.toString(
-            10
-        )}, but max is ${maxColumnNumber}.`;
+        // eslint-disable-next-line max-len
+        const errorMessage = `The column number is too big. Column number is ${columnNumber}, but max is ${maxColumnNumber}.`;
 
         appUI.alert(errorMessage);
 
