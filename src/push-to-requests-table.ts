@@ -1,10 +1,13 @@
-/* global Logger, SpreadsheetApp, GoogleAppsScript */
-
 /* eslint-disable @typescript-eslint/no-unused-vars, no-unused-vars */
+
+/* global Logger, SpreadsheetApp, GoogleAppsScript */
 
 // main constants
 const requestsTableId = '1E5BIjJ6cpFsSl9fVcBvt9x8Bk7-uhqrz64jFbmqg5GI';
-const requestsSheetName = 'requests';
+const requestsSheetName = 'Requests';
+const childTable1Id = '11ZNH5S8DuZUobQU6sw-_Svx5vVt62I9CmxSSF_eGFDM';
+const childTable2Id = '1C3pU0hsaGZnsztX72ZND6WRsHBA5EyY5ozEilL2CrOA';
+const childTableIdList: Array<string> = [childTable1Id, childTable2Id];
 
 // first row with data
 const dataRowBegin = 3;
@@ -223,25 +226,6 @@ const pushToRequestsTable = {
                 requestsSheet.getRange(requestsRangeRowNumber, currentColumnNumber).setValue(managerRowData);
             });
         });
-
-        /*
-                const spreadsheetApp: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.getActive();
-                const sheet: GoogleAppsScript.Spreadsheet.Sheet = spreadsheetApp.getActiveSheet();
-                const range: GoogleAppsScript.Spreadsheet.Range = sheet.getRange(managerDataRange);
-
-                range.getValues().forEach((row: unknown) => {
-                    Logger.log(JSON.stringify(row));
-                });
-
-                Logger.log(sheet.getSheetId());
-                Logger.log(sheet.getSheetName());
-
-                range.sort({ascending: true, column: 2});
-        */
-
-        Logger.log('////////////////');
-        // const appUI = SpreadsheetApp.getUi();
-        // appUI.alert("pushDataToRequestTable");
     },
 
     updateRowsId() {
@@ -253,7 +237,7 @@ const pushToRequestsTable = {
         range.getValues().forEach((row: Array<unknown>, index: number) => {
             const columnId = String(row[util.columnStringToNumber(rowIdColumnName) - 1] || '').trim();
             const rowNumber: number = index + dataRowBegin;
-            const hasRowValue = row.join('').trim().length > 0;
+            const hasRowValue = row.join('').replace(columnId, '').trim() !== '';
             const cellIdRange = sheet.getRange(`${rowIdColumnName}${rowNumber}`);
             // const cellTableIdRange = sheet.getRange(`${tableIdColumnName}${rowNumber}`);
 
