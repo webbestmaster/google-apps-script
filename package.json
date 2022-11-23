@@ -4,12 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "clasp": "clasp",
     "clasp-login": "clasp login",
-    "clasp-create": "clasp create test-app",
-    "clasp-push": "clasp push --watch",
-    "clasp-versions": "clasp versions",
-    "clasp-deploy": "clasp deploy 1",
+    "clasp-dev": "clasp push --watch",
+    "clasp:use-requests-id": "clasp-env --folder ./ --scriptId 1k1woFCAvL_jWhYlkfXrLYO5UdasG5vIAFurwv9v7UshgiLT44KrW83cW",
+    "clasp:use-manager-id": "clasp-env --folder ./ --scriptId 1bWbJd4Pheh794MJLkZ9PnQ9-_1Cu1JPPeYIajTQbbI3VndkcTqNBiQOM",
     "check": "npm run ts-coverage && npm run tsc && npm run eslint",
     "check:fix": "npm run prettier && npm run ts-coverage && npm run tsc && npm run eslint:fix",
     "eslint": "eslint .",
@@ -32,7 +30,8 @@
   "homepage": "https://github.com/webbestmaster/google-apps-script#readme",
   "dependencies": {
     "@google/clasp": "^2.4.2",
-    "@types/google-apps-script": "^1.0.56"
+    "@types/google-apps-script": "^1.0.56",
+    "clasp-env": "^1.0.1"
   },
   "devDependencies": {
     "@jest/globals": "^29.3.1",

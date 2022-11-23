@@ -5,9 +5,9 @@
 // main constants
 const requestsTableId = '1E5BIjJ6cpFsSl9fVcBvt9x8Bk7-uhqrz64jFbmqg5GI';
 const requestsSheetName = 'Requests';
-const childTable1Id = '11ZNH5S8DuZUobQU6sw-_Svx5vVt62I9CmxSSF_eGFDM';
-const childTable2Id = '1C3pU0hsaGZnsztX72ZND6WRsHBA5EyY5ozEilL2CrOA';
-const childTableIdList: Array<string> = [childTable1Id, childTable2Id];
+const managerTable1Id = '11ZNH5S8DuZUobQU6sw-_Svx5vVt62I9CmxSSF_eGFDM';
+const managerTable2Id = '1C3pU0hsaGZnsztX72ZND6WRsHBA5EyY5ozEilL2CrOA';
+const managerTableIdList: Set<string> = new Set([managerTable1Id, managerTable2Id]);
 
 // first row with data
 const dataRowBegin = 3;
@@ -20,12 +20,14 @@ const managerColumnEndString = 'I';
 const requestsColumnBeginString = 'J';
 const requestsColumnEndString = 'T';
 
-const commonColumnBeginString = 'J';
-const commonColumnEndString = 'T';
+const commonColumnBeginString = 'U';
+const commonColumnEndString = 'AX';
 
 const tableIdColumnName = 'AY';
 const rowIdColumnName = 'AZ';
 // const requestDataRange = 'E3:H';
+
+const appUI: GoogleAppsScript.Base.Ui = SpreadsheetApp.getUi();
 
 const util = {
     // eslint-disable-next-line max-statements, complexity
@@ -36,7 +38,6 @@ const util = {
         const lastLetter = list[alphabetLength - 1];
         const minColumnNumber = 1;
         const maxColumnNumber = alphabetLength * (alphabetLength + 1);
-        const appUI = SpreadsheetApp.getUi();
 
         if (Math.round(columnNumber) !== columnNumber) {
             const errorMessage = `The column number is not integer. Column number is ${columnNumber}`;
@@ -84,6 +85,11 @@ const util = {
         return [...columnString].reverse().reduce<number>((sum: number, char: string, index: number) => {
             return sum + (list.indexOf(char) + 1) * Math.pow(alphabetLength, index);
         }, 0);
+    },
+    getIsManagerSpreadsheet(): boolean {
+        const spreadsheetId = SpreadsheetApp.getActive().getId();
+
+        return managerTableIdList.has(spreadsheetId);
     },
     getRandomString(): string {
         const fromRandom = Math.random().toString(32).replace('0.', '');
@@ -153,8 +159,6 @@ const pushToRequestsTable = {
         const requestsSheet: GoogleAppsScript.Spreadsheet.Sheet | null =
             requestsSpreadsheet.getSheetByName(requestsSheetName);
 
-        const appUI: GoogleAppsScript.Base.Ui = SpreadsheetApp.getUi();
-
         if (!requestsSheet) {
             const errorMessage = '[getRequestsSheet]: Can not requests table and/or requests sheet.';
 
@@ -167,7 +171,12 @@ const pushToRequestsTable = {
     },
 
     initialize() {
-        pushToRequestsTable.makeUiMenu();
+        if (util.getIsManagerSpreadsheet()) {
+            pushToRequestsTable.makeUiMenuForManager();
+        } else {
+            pushToRequestsTable.makeUiMenuForRequests();
+        }
+
         pushToRequestsTable.updateRowsId();
 
         // protect row id
@@ -179,12 +188,24 @@ const pushToRequestsTable = {
 */
     },
 
-    makeUiMenu() {
-        const appUI = SpreadsheetApp.getUi();
+    makeUiMenuForManager() {
         const menu: GoogleAppsScript.Base.Menu = appUI.createMenu('Push data to requests table');
 
         menu.addItem('push to requests table', 'pushToRequestsTable.pushDataToRequestTable');
         menu.addToUi();
+    },
+
+    makeUiMenuForRequests() {
+        const menu: GoogleAppsScript.Base.Menu = appUI.createMenu('Push data to managers table');
+
+        menu.addItem('push to managers table', 'pushToRequestsTable.pushDataToManagerTable');
+
+        menu.addToUi();
+    },
+
+    // eslint-disable-next-line sonarjs/cognitive-complexity
+    pushDataToManagerTable() {
+        appUI.alert('pushDataToManagerTable');
     },
 
     // eslint-disable-next-line sonarjs/cognitive-complexity
@@ -200,8 +221,10 @@ const pushToRequestsTable = {
 
             const requestsRange: GoogleAppsScript.Spreadsheet.Range = pushToRequestsTable.getAllRequestsDataRange();
             const requestsSheet = pushToRequestsTable.getRequestsSheet();
-            const startColumnNumber = util.columnStringToNumber(managerColumnBeginString);
-            const endColumnNumber = util.columnStringToNumber(managerColumnEndString);
+            const startManagerColumnNumber = util.columnStringToNumber(managerColumnBeginString);
+            const endManagerColumnNumber = util.columnStringToNumber(managerColumnEndString);
+            const startCommonColumnNumber = util.columnStringToNumber(commonColumnBeginString);
+            const endCommonColumnNumber = util.columnStringToNumber(commonColumnEndString);
 
             const requestsRangeRowIndex: number = requestsRange
                 .getValues()
@@ -218,14 +241,18 @@ const pushToRequestsTable = {
 
             managerRow.forEach((managerRowData: unknown, managerColumnIndex: number) => {
                 const currentColumnNumber = managerColumnIndex + 1;
+                const isInManagerColumnRange =
+                    currentColumnNumber >= startManagerColumnNumber && currentColumnNumber <= endManagerColumnNumber;
+                const isInCommonColumnRange =
+                    currentColumnNumber >= startCommonColumnNumber && currentColumnNumber <= endCommonColumnNumber;
 
-                if (currentColumnNumber < startColumnNumber && currentColumnNumber > endColumnNumber) {
-                    return;
+                if (isInManagerColumnRange || isInCommonColumnRange) {
+                    requestsSheet.getRange(requestsRangeRowNumber, currentColumnNumber).setValue(managerRowData);
                 }
-
-                requestsSheet.getRange(requestsRangeRowNumber, currentColumnNumber).setValue(managerRowData);
             });
         });
+
+        SpreadsheetApp.flush();
     },
 
     updateRowsId() {
