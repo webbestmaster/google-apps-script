@@ -14,16 +14,22 @@ const dataRowBegin = 3;
 const firstColumnName = 'A';
 const lastColumnName = 'AZ';
 
+// TODO: make as array
 const managerColumnBeginString = 'A';
+// TODO: make as array
 const managerColumnEndString = 'I';
 
 const requestsColumnBeginString = 'J';
 const requestsColumnEndString = 'T';
 
+// TODO: make as array
 const commonColumnBeginString = 'U';
+// TODO: make as array
 const commonColumnEndString = 'AX';
 
+// TODO: make as array
 const tableIdColumnName = 'AY';
+// TODO: make as array
 const rowIdColumnName = 'AZ';
 // const requestDataRange = 'E3:H';
 
@@ -75,7 +81,6 @@ const util = {
 
         return list[Math.floor(columnNumber / alphabetLength) - 1] + list[(columnNumber % alphabetLength) - 1];
     },
-    // eslint-disable-next-line max-statements, complexity
     columnStringToNumber(columnStringRaw: string): number {
         const alphabet = 'abcdefghijklmnopqrstuvwxyz';
         const alphabetLength: number = alphabet.length;
@@ -125,7 +130,43 @@ console.log(columnNumberToString(702));
 console.log(columnStringToNumber('zz'));
 */
 
-const pushToRequestsTable = {
+const mainTable = {
+    updateRowsId() {
+        // todo: make for requests table too
+        const range = managerTable.getAllDataRange();
+        const spreadsheetApp: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.getActive();
+        const sheet: GoogleAppsScript.Spreadsheet.Sheet = spreadsheetApp.getActiveSheet();
+
+        // eslint-disable-next-line complexity
+        range.getValues().forEach((row: Array<unknown>, index: number) => {
+            const columnId = String(row[util.columnStringToNumber(rowIdColumnName) - 1] || '').trim();
+            const rowNumber: number = index + dataRowBegin;
+            const hasRowValue = row.join('').replace(columnId, '').trim() !== '';
+            const cellIdRange = sheet.getRange(`${rowIdColumnName}${rowNumber}`);
+            // const cellTableIdRange = sheet.getRange(`${tableIdColumnName}${rowNumber}`);
+
+            if (hasRowValue && columnId) {
+                return;
+            }
+
+            if (!hasRowValue && !columnId) {
+                return;
+            }
+
+            if (hasRowValue && !columnId) {
+                cellIdRange.setValue(util.getRandomString());
+                return;
+            }
+
+            if (!hasRowValue && columnId) {
+                cellIdRange.setValue('');
+            }
+        });
+    },
+}
+
+
+const managerTable = {
     getAllDataRange(): GoogleAppsScript.Spreadsheet.Range {
         const spreadsheetApp: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.getActive();
         const sheet: GoogleAppsScript.Spreadsheet.Sheet = spreadsheetApp.getActiveSheet();
@@ -136,81 +177,16 @@ const pushToRequestsTable = {
         return range;
     },
 
-    getAllRequestsDataRange(): GoogleAppsScript.Spreadsheet.Range {
-        const requestsSheet = pushToRequestsTable.getRequestsSheet();
-
-        const requestsRange: GoogleAppsScript.Spreadsheet.Range = requestsSheet.getRange(
-            `${firstColumnName}${dataRowBegin}:${lastColumnName}`
-        );
-
-        return requestsRange;
-    },
-
-    getRequestsRange(a1Notation: string): GoogleAppsScript.Spreadsheet.Range {
-        const requestsSheet: GoogleAppsScript.Spreadsheet.Sheet | null = pushToRequestsTable.getRequestsSheet();
-
-        const requestsRange: GoogleAppsScript.Spreadsheet.Range = requestsSheet.getRange(a1Notation);
-
-        return requestsRange;
-    },
-
-    getRequestsSheet(): GoogleAppsScript.Spreadsheet.Sheet {
-        const requestsSpreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.openById(requestsTableId);
-        const requestsSheet: GoogleAppsScript.Spreadsheet.Sheet | null =
-            requestsSpreadsheet.getSheetByName(requestsSheetName);
-
-        if (!requestsSheet) {
-            const errorMessage = '[getRequestsSheet]: Can not requests table and/or requests sheet.';
-
-            appUI.alert(errorMessage);
-
-            throw new Error(errorMessage);
-        }
-
-        return requestsSheet;
-    },
-
-    initialize() {
-        if (util.getIsManagerSpreadsheet()) {
-            pushToRequestsTable.makeUiMenuForManager();
-        } else {
-            pushToRequestsTable.makeUiMenuForRequests();
-        }
-
-        pushToRequestsTable.updateRowsId();
-
-        // protect row id
-        /*
-        const spreadsheetApp: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.getActive();
-        const sheet: GoogleAppsScript.Spreadsheet.Sheet = spreadsheetApp.getActiveSheet();
-
-        sheet.getRange(rowIdColumnName).protect().setDescription('Protected range.');
-*/
-    },
-
     makeUiMenuForManager() {
         const menu: GoogleAppsScript.Base.Menu = appUI.createMenu('Push data to requests table');
 
-        menu.addItem('push to requests table', 'pushToRequestsTable.pushDataToRequestTable');
+        menu.addItem('push to requests table', 'managerTable.pushDataToRequestTable');
         menu.addToUi();
-    },
-
-    makeUiMenuForRequests() {
-        const menu: GoogleAppsScript.Base.Menu = appUI.createMenu('Push data to managers table');
-
-        menu.addItem('push to managers table', 'pushToRequestsTable.pushDataToManagerTable');
-
-        menu.addToUi();
-    },
-
-    // eslint-disable-next-line sonarjs/cognitive-complexity
-    pushDataToManagerTable() {
-        appUI.alert('pushDataToManagerTable');
     },
 
     // eslint-disable-next-line sonarjs/cognitive-complexity
     pushDataToRequestTable() {
-        const managerRange: GoogleAppsScript.Spreadsheet.Range = pushToRequestsTable.getAllDataRange();
+        const managerRange: GoogleAppsScript.Spreadsheet.Range = managerTable.getAllDataRange();
 
         managerRange.getValues().forEach((managerRow: Array<unknown>) => {
             const managerColumnId = String(managerRow[util.columnStringToNumber(rowIdColumnName) - 1] || '').trim();
@@ -219,8 +195,8 @@ const pushToRequestsTable = {
                 return;
             }
 
-            const requestsRange: GoogleAppsScript.Spreadsheet.Range = pushToRequestsTable.getAllRequestsDataRange();
-            const requestsSheet = pushToRequestsTable.getRequestsSheet();
+            const requestsRange: GoogleAppsScript.Spreadsheet.Range = requestsTable.getAllRequestsDataRange();
+            const requestsSheet = requestsTable.getRequestsSheet();
             const startManagerColumnNumber = util.columnStringToNumber(managerColumnBeginString);
             const endManagerColumnNumber = util.columnStringToNumber(managerColumnEndString);
             const startCommonColumnNumber = util.columnStringToNumber(commonColumnBeginString);
@@ -254,45 +230,69 @@ const pushToRequestsTable = {
 
         SpreadsheetApp.flush();
     },
-
-    updateRowsId() {
-        const range = pushToRequestsTable.getAllDataRange();
-        const spreadsheetApp: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.getActive();
-        const sheet: GoogleAppsScript.Spreadsheet.Sheet = spreadsheetApp.getActiveSheet();
-
-        // eslint-disable-next-line complexity
-        range.getValues().forEach((row: Array<unknown>, index: number) => {
-            const columnId = String(row[util.columnStringToNumber(rowIdColumnName) - 1] || '').trim();
-            const rowNumber: number = index + dataRowBegin;
-            const hasRowValue = row.join('').replace(columnId, '').trim() !== '';
-            const cellIdRange = sheet.getRange(`${rowIdColumnName}${rowNumber}`);
-            // const cellTableIdRange = sheet.getRange(`${tableIdColumnName}${rowNumber}`);
-
-            if (hasRowValue && columnId) {
-                return;
-            }
-
-            if (!hasRowValue && !columnId) {
-                return;
-            }
-
-            if (hasRowValue && !columnId) {
-                cellIdRange.setValue(util.getRandomString());
-                return;
-            }
-
-            if (!hasRowValue && columnId) {
-                cellIdRange.setValue('');
-            }
-        });
-    },
 };
+
+const requestsTable = {
+    getRequestsSheet(): GoogleAppsScript.Spreadsheet.Sheet {
+        const requestsSpreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.openById(requestsTableId);
+        const requestsSheet: GoogleAppsScript.Spreadsheet.Sheet | null =
+            requestsSpreadsheet.getSheetByName(requestsSheetName);
+
+        if (!requestsSheet) {
+            const errorMessage = '[getRequestsSheet]: Can not requests table and/or requests sheet.';
+
+            appUI.alert(errorMessage);
+
+            throw new Error(errorMessage);
+        }
+
+        return requestsSheet;
+    },
+
+    getAllRequestsDataRange(): GoogleAppsScript.Spreadsheet.Range {
+        const requestsSheet = requestsTable.getRequestsSheet();
+
+        const requestsRange: GoogleAppsScript.Spreadsheet.Range = requestsSheet.getRange(
+            `${firstColumnName}${dataRowBegin}:${lastColumnName}`
+        );
+
+        return requestsRange;
+    },
+
+    // eslint-disable-next-line sonarjs/cognitive-complexity
+    pushDataToManagerTable() {
+        appUI.alert('pushDataToManagerTable');
+    },
+
+    makeUiMenuForRequests() {
+        const menu: GoogleAppsScript.Base.Menu = appUI.createMenu('Push data to managers table');
+
+        menu.addItem('push to managers table', 'requestsTable.pushDataToManagerTable');
+        menu.addToUi();
+    },
+    /*
+        getRequestsRange(a1Notation: string): GoogleAppsScript.Spreadsheet.Range {
+            const requestsSheet: GoogleAppsScript.Spreadsheet.Sheet | null = requestsTable.getRequestsSheet();
+
+            const requestsRange: GoogleAppsScript.Spreadsheet.Range = requestsSheet.getRange(a1Notation);
+
+            return requestsRange;
+        },
+    */
+}
+
 
 // will call on document open
 function onOpen() {
-    pushToRequestsTable.initialize();
+    if (util.getIsManagerSpreadsheet()) {
+        managerTable.makeUiMenuForManager();
+    } else {
+        requestsTable.makeUiMenuForRequests();
+    }
+
+    mainTable.updateRowsId();
 }
 
 function onEdit() {
-    pushToRequestsTable.updateRowsId();
+    mainTable.updateRowsId();
 }
