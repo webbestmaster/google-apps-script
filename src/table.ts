@@ -10,28 +10,20 @@ const managerTable1Id = '11ZNH5S8DuZUobQU6sw-_Svx5vVt62I9CmxSSF_eGFDM';
 const managerTable2Id = '1C3pU0hsaGZnsztX72ZND6WRsHBA5EyY5ozEilL2CrOA';
 const managerTableIdList: Set<string> = new Set([managerTable1Id, managerTable2Id]);
 
+// ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
+const managerColumnList: Set<string> = new Set(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']);
+const requestsColumnList: Set<string> = new Set(['J', 'K', 'L', 'M', 'N', 'O']);
+const commonColumnList: Set<string> = new Set(['P', 'Q', 'R', 'S', 'T', 'U', 'V']);
+const rowIdColumnName = 'AZ';
+const skipRowColumnName = 'BA';
+const removeRowColumnName = 'BB';
+
 // first row with data
 const dataRowBegin = 3;
 const firstColumnName = 'A';
-const lastColumnName = 'AZ';
+const [lastColumnName] = [rowIdColumnName, skipRowColumnName, removeRowColumnName].sort().reverse();
 
-// TODO: make as array
-const managerColumnBeginString = 'A';
-// TODO: make as array
-const managerColumnEndString = 'I';
-
-const requestsColumnBeginString = 'J';
-const requestsColumnEndString = 'T';
-
-// TODO: make as array
-const commonColumnBeginString = 'U';
-// TODO: make as array
-const commonColumnEndString = 'AX';
-
-// TODO: make as array
-const tableIdColumnName = 'AY';
-// TODO: make as array
-const rowIdColumnName = 'AZ';
+Logger.log(lastColumnName);
 
 const appUI: GoogleAppsScript.Base.Ui = SpreadsheetApp.getUi();
 
@@ -49,7 +41,6 @@ const util = {
             const errorMessage = `The column number is not integer. Column number is ${columnNumber}`;
 
             appUI.alert(errorMessage);
-
             throw new Error(errorMessage);
         }
 
@@ -58,7 +49,6 @@ const util = {
             const errorMessage = `The column number is too small. Column number is ${columnNumber}, but min is ${minColumnNumber}.`;
 
             appUI.alert(errorMessage);
-
             throw new Error(errorMessage);
         }
 
@@ -67,7 +57,6 @@ const util = {
             const errorMessage = `The column number is too big. Column number is ${columnNumber}, but max is ${maxColumnNumber}.`;
 
             appUI.alert(errorMessage);
-
             throw new Error(errorMessage);
         }
 
@@ -203,10 +192,6 @@ const managerTable = {
 
             const requestsRange: GoogleAppsScript.Spreadsheet.Range = requestsTable.getAllRequestsDataRange();
             const requestsSheet = requestsTable.getRequestsSheet();
-            const startManagerColumnNumber = util.columnStringToNumber(managerColumnBeginString);
-            const endManagerColumnNumber = util.columnStringToNumber(managerColumnEndString);
-            const startCommonColumnNumber = util.columnStringToNumber(commonColumnBeginString);
-            const endCommonColumnNumber = util.columnStringToNumber(commonColumnEndString);
 
             const requestsRangeRowIndex: number = requestsRange
                 .getValues()
@@ -223,12 +208,14 @@ const managerTable = {
 
             managerRow.forEach((managerRowData: unknown, managerColumnIndex: number) => {
                 const currentColumnNumber = managerColumnIndex + 1;
-                const isInManagerColumnRange =
-                    currentColumnNumber >= startManagerColumnNumber && currentColumnNumber <= endManagerColumnNumber;
-                const isInCommonColumnRange =
-                    currentColumnNumber >= startCommonColumnNumber && currentColumnNumber <= endCommonColumnNumber;
+                const currentColumnString = util.columnNumberToString(currentColumnNumber);
+                const isInManagerColumnRange = managerColumnList.has(currentColumnString);
+                const isInCommonColumnRange = commonColumnList.has(currentColumnString);
+                const isRowIdColumn = currentColumnString === rowIdColumnName;
 
-                if (isInManagerColumnRange || isInCommonColumnRange) {
+                Logger.log(managerColumnIndex + '-' + managerRowData);
+
+                if (isInManagerColumnRange || isInCommonColumnRange || isRowIdColumn) {
                     requestsSheet.getRange(requestsRangeRowNumber, currentColumnNumber).setValue(managerRowData);
                 }
             });
