@@ -1,10 +1,11 @@
-/* eslint-disable @typescript-eslint/no-unused-vars, no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unused-vars, no-unused-vars, @typescript-eslint/no-use-before-define */
 
 /* global Logger, SpreadsheetApp, GoogleAppsScript */
 
 // main constants
 const requestsTableId = '1E5BIjJ6cpFsSl9fVcBvt9x8Bk7-uhqrz64jFbmqg5GI';
 const requestsSheetName = 'Requests';
+
 const managerTable1Id = '11ZNH5S8DuZUobQU6sw-_Svx5vVt62I9CmxSSF_eGFDM';
 const managerTable2Id = '1C3pU0hsaGZnsztX72ZND6WRsHBA5EyY5ozEilL2CrOA';
 const managerTableIdList: Set<string> = new Set([managerTable1Id, managerTable2Id]);
@@ -31,7 +32,6 @@ const commonColumnEndString = 'AX';
 const tableIdColumnName = 'AY';
 // TODO: make as array
 const rowIdColumnName = 'AZ';
-// const requestDataRange = 'E3:H';
 
 const appUI: GoogleAppsScript.Base.Ui = SpreadsheetApp.getUi();
 
@@ -96,6 +96,11 @@ const util = {
 
         return managerTableIdList.has(spreadsheetId);
     },
+    getIsRequestsSpreadsheet(): boolean {
+        const spreadsheetId = SpreadsheetApp.getActive().getId();
+
+        return spreadsheetId === requestsTableId;
+    },
     getRandomString(): string {
         const fromRandom = Math.random().toString(32).replace('0.', '');
         const fromTime = Date.now().toString(32);
@@ -132,10 +137,12 @@ console.log(columnStringToNumber('zz'));
 
 const mainTable = {
     updateRowsId() {
-        // todo: make for requests table too
-        const range = managerTable.getAllDataRange();
         const spreadsheetApp: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.getActive();
         const sheet: GoogleAppsScript.Spreadsheet.Sheet = spreadsheetApp.getActiveSheet();
+
+        const range: GoogleAppsScript.Spreadsheet.Range = sheet.getRange(
+            `${firstColumnName}${dataRowBegin}:${lastColumnName}`
+        );
 
         // eslint-disable-next-line complexity
         range.getValues().forEach((row: Array<unknown>, index: number) => {
@@ -163,8 +170,7 @@ const mainTable = {
             }
         });
     },
-}
-
+};
 
 const managerTable = {
     getAllDataRange(): GoogleAppsScript.Spreadsheet.Range {
@@ -233,22 +239,6 @@ const managerTable = {
 };
 
 const requestsTable = {
-    getRequestsSheet(): GoogleAppsScript.Spreadsheet.Sheet {
-        const requestsSpreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.openById(requestsTableId);
-        const requestsSheet: GoogleAppsScript.Spreadsheet.Sheet | null =
-            requestsSpreadsheet.getSheetByName(requestsSheetName);
-
-        if (!requestsSheet) {
-            const errorMessage = '[getRequestsSheet]: Can not requests table and/or requests sheet.';
-
-            appUI.alert(errorMessage);
-
-            throw new Error(errorMessage);
-        }
-
-        return requestsSheet;
-    },
-
     getAllRequestsDataRange(): GoogleAppsScript.Spreadsheet.Range {
         const requestsSheet = requestsTable.getRequestsSheet();
 
@@ -259,9 +249,19 @@ const requestsTable = {
         return requestsRange;
     },
 
-    // eslint-disable-next-line sonarjs/cognitive-complexity
-    pushDataToManagerTable() {
-        appUI.alert('pushDataToManagerTable');
+    getRequestsSheet(): GoogleAppsScript.Spreadsheet.Sheet {
+        const requestsSpreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.openById(requestsTableId);
+        const requestsSheet: GoogleAppsScript.Spreadsheet.Sheet | null =
+            requestsSpreadsheet.getSheetByName(requestsSheetName);
+
+        if (!requestsSheet) {
+            const errorMessage = '[getRequestsSheet]: Can not requests table and/or requests sheet.';
+
+            appUI.alert(errorMessage);
+            throw new Error(errorMessage);
+        }
+
+        return requestsSheet;
     },
 
     makeUiMenuForRequests() {
@@ -270,6 +270,12 @@ const requestsTable = {
         menu.addItem('push to managers table', 'requestsTable.pushDataToManagerTable');
         menu.addToUi();
     },
+
+    // eslint-disable-next-line sonarjs/cognitive-complexity
+    pushDataToManagerTable() {
+        appUI.alert('pushDataToManagerTable');
+    },
+
     /*
         getRequestsRange(a1Notation: string): GoogleAppsScript.Spreadsheet.Range {
             const requestsSheet: GoogleAppsScript.Spreadsheet.Sheet | null = requestsTable.getRequestsSheet();
@@ -279,14 +285,15 @@ const requestsTable = {
             return requestsRange;
         },
     */
-}
-
+};
 
 // will call on document open
 function onOpen() {
     if (util.getIsManagerSpreadsheet()) {
         managerTable.makeUiMenuForManager();
-    } else {
+    }
+
+    if (util.getIsRequestsSpreadsheet()) {
         requestsTable.makeUiMenuForRequests();
     }
 
