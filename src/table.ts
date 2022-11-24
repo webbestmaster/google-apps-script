@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unused-vars, no-unused-vars, @typescript-eslint/no-use-before-define */
+/* eslint-disable @typescript-eslint/no-unused-vars, no-unused-vars, @typescript-eslint/no-use-before-define, sort-keys */
 
 /* global Logger, SpreadsheetApp, GoogleAppsScript */
 
@@ -11,9 +11,9 @@ const managerTable2Id = '1C3pU0hsaGZnsztX72ZND6WRsHBA5EyY5ozEilL2CrOA';
 const managerTableIdList: Set<string> = new Set([managerTable1Id, managerTable2Id]);
 
 // ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
-const managerColumnList: Set<string> = new Set(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']);
-const requestsColumnList: Set<string> = new Set(['J', 'K', 'L', 'M', 'N', 'O']);
-const commonColumnList: Set<string> = new Set(['P', 'Q', 'R', 'S', 'T', 'U', 'V']);
+const managerColumnList: Array<string> = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
+const requestsColumnList: Array<string> = ['J', 'K', 'L', 'M', 'N', 'O'];
+const commonColumnList: Array<string> = ['P', 'Q', 'R', 'S', 'T', 'U', 'V'];
 const rowIdColumnName = 'AZ';
 const skipRowColumnName = 'BA';
 const removeRowColumnName = 'BB';
@@ -29,6 +29,7 @@ const appUI: GoogleAppsScript.Base.Ui = SpreadsheetApp.getUi();
 
 const util = {
     // eslint-disable-next-line max-statements, complexity
+    /*
     columnNumberToString(columnNumber: number): string {
         const alphabet = 'abcdefghijklmnopqrstuvwxyz';
         const alphabetLength: number = alphabet.length;
@@ -65,11 +66,12 @@ const util = {
         }
 
         if (columnNumber <= alphabetLength) {
-            return lastLetter;
+            return list[columnNumber - 1];
         }
 
         return list[Math.floor(columnNumber / alphabetLength) - 1] + list[(columnNumber % alphabetLength) - 1];
     },
+*/
     columnStringToNumber(columnStringRaw: string): number {
         const alphabet = 'abcdefghijklmnopqrstuvwxyz';
         const alphabetLength: number = alphabet.length;
@@ -95,6 +97,36 @@ const util = {
         const fromTime = Date.now().toString(32);
 
         return `${fromRandom}${fromTime}`.toLowerCase();
+    },
+    getIsSkipRow(row: Array<unknown>): boolean {
+        const skipRowRawValue = row[util.columnStringToNumber(skipRowColumnName) - 1];
+
+        return skipRowRawValue === true;
+    },
+    getIsRemoveRow(row: Array<unknown>): boolean {
+        const removeRowRawValue = row[util.columnStringToNumber(removeRowColumnName) - 1];
+
+        return removeRowRawValue === true;
+    },
+    // eslint-disable-next-line max-statements, complexity
+    stringify(value: unknown): string {
+        if (typeof value === 'string') {
+            return value.trim();
+        }
+
+        if (typeof value === 'boolean') {
+            return value.toString().toLowerCase();
+        }
+
+        if (typeof value === 'number') {
+            return value.toString(10);
+        }
+
+        if (!value) {
+            return '';
+        }
+
+        return String(value);
     },
 };
 
@@ -134,27 +166,32 @@ const mainTable = {
         );
 
         // eslint-disable-next-line complexity
-        range.getValues().forEach((row: Array<unknown>, index: number) => {
-            const columnId = String(row[util.columnStringToNumber(rowIdColumnName) - 1] || '').trim();
-            const rowNumber: number = index + dataRowBegin;
-            const hasRowValue = row.join('').replace(columnId, '').trim() !== '';
+        range.getValues().forEach((row: Array<unknown>, rowIndex: number) => {
+            const rwoId = util.stringify(row[util.columnStringToNumber(rowIdColumnName) - 1]);
+            const rowNumber: number = rowIndex + dataRowBegin;
+            const hasRowValue =
+                row
+                    .join('')
+                    .replace(rwoId, '')
+                    .replace(/true|false/gi, '')
+                    .trim().length > 0;
             const cellIdRange = sheet.getRange(`${rowIdColumnName}${rowNumber}`);
             // const cellTableIdRange = sheet.getRange(`${tableIdColumnName}${rowNumber}`);
 
-            if (hasRowValue && columnId) {
+            if (hasRowValue && rwoId) {
                 return;
             }
 
-            if (!hasRowValue && !columnId) {
+            if (!hasRowValue && !rwoId) {
                 return;
             }
 
-            if (hasRowValue && !columnId) {
+            if (hasRowValue && !rwoId) {
                 cellIdRange.setValue(util.getRandomString());
                 return;
             }
 
-            if (!hasRowValue && columnId) {
+            if (!hasRowValue && rwoId) {
                 cellIdRange.setValue('');
             }
         });
@@ -175,53 +212,130 @@ const managerTable = {
     makeUiMenuForManager() {
         const menu: GoogleAppsScript.Base.Menu = appUI.createMenu('Push data to requests table');
 
-        menu.addItem('push to requests table', 'managerTable.pushDataToRequestTable');
+        menu.addItem('Push to Requests Table', 'managerTable.pushDataToRequestTable');
         menu.addToUi();
     },
 
     // eslint-disable-next-line sonarjs/cognitive-complexity
     pushDataToRequestTable() {
-        const managerRange: GoogleAppsScript.Spreadsheet.Range = managerTable.getAllDataRange();
-
-        managerRange.getValues().forEach((managerRow: Array<unknown>) => {
-            const managerColumnId = String(managerRow[util.columnStringToNumber(rowIdColumnName) - 1] || '').trim();
-
-            if (!managerColumnId) {
-                return;
-            }
-
-            const requestsRange: GoogleAppsScript.Spreadsheet.Range = requestsTable.getAllRequestsDataRange();
-            const requestsSheet = requestsTable.getRequestsSheet();
-
-            const requestsRangeRowIndex: number = requestsRange
-                .getValues()
-                .findIndex((requestsRow: Array<unknown>): boolean => {
-                    const requestsColumnId = String(
-                        requestsRow[util.columnStringToNumber(rowIdColumnName) - 1] || ''
-                    ).trim();
-
-                    return requestsColumnId === managerColumnId;
-                });
-
-            const requestsRangeRowNumber: number =
-                requestsRangeRowIndex === -1 ? requestsSheet.getLastRow() + 1 : requestsRangeRowIndex + dataRowBegin;
-
-            managerRow.forEach((managerRowData: unknown, managerColumnIndex: number) => {
-                const currentColumnNumber = managerColumnIndex + 1;
-                const currentColumnString = util.columnNumberToString(currentColumnNumber);
-                const isInManagerColumnRange = managerColumnList.has(currentColumnString);
-                const isInCommonColumnRange = commonColumnList.has(currentColumnString);
-                const isRowIdColumn = currentColumnString === rowIdColumnName;
-
-                Logger.log(managerColumnIndex + '-' + managerRowData);
-
-                if (isInManagerColumnRange || isInCommonColumnRange || isRowIdColumn) {
-                    requestsSheet.getRange(requestsRangeRowNumber, currentColumnNumber).setValue(managerRowData);
+        // remove rows in requests table
+        managerTable
+            .getAllDataRange()
+            .getValues()
+            .forEach((managerRow: Array<unknown>) => {
+                if (util.getIsSkipRow(managerRow) || !util.getIsRemoveRow(managerRow)) {
+                    return;
                 }
-            });
-        });
 
-        SpreadsheetApp.flush();
+                const managerRowId = util.stringify(managerRow[util.columnStringToNumber(rowIdColumnName) - 1]);
+
+                if (!managerRowId) {
+                    return;
+                }
+
+                const requestsRange: GoogleAppsScript.Spreadsheet.Range = requestsTable.getAllRequestsDataRange();
+                const requestsSheet = requestsTable.getRequestsSheet();
+
+                const requestsRangeRowIndex: number = requestsRange
+                    .getValues()
+                    .findIndex((requestsRow: Array<unknown>): boolean => {
+                        const requestsRowId = util.stringify(
+                            requestsRow[util.columnStringToNumber(rowIdColumnName) - 1]
+                        );
+
+                        return requestsRowId === managerRowId;
+                    });
+
+                if (requestsRangeRowIndex === -1) {
+                    return;
+                }
+
+                requestsSheet.deleteRow(requestsRangeRowIndex + dataRowBegin);
+            });
+
+        // remove rows in manager table
+        managerTable
+            .getAllDataRange()
+            .getValues()
+            .forEach((managerRow: Array<unknown>) => {
+                if (util.getIsSkipRow(managerRow) || !util.getIsRemoveRow(managerRow)) {
+                    return;
+                }
+
+                const managerRowId = util.stringify(managerRow[util.columnStringToNumber(rowIdColumnName) - 1]);
+
+                if (!managerRowId) {
+                    return;
+                }
+
+                const managerRemoveRange: GoogleAppsScript.Spreadsheet.Range = managerTable.getAllDataRange();
+                const sheet: GoogleAppsScript.Spreadsheet.Sheet = SpreadsheetApp.getActive().getActiveSheet();
+
+                const removeManagerRangeRowIndex: number = managerRemoveRange
+                    .getValues()
+                    .findIndex((removeManagerRow: Array<unknown>): boolean => {
+                        const removeManagerRowId = util.stringify(
+                            removeManagerRow[util.columnStringToNumber(rowIdColumnName) - 1]
+                        );
+
+                        return removeManagerRowId === managerRowId;
+                    });
+
+                if (removeManagerRangeRowIndex === -1) {
+                    return;
+                }
+
+                sheet.deleteRow(removeManagerRangeRowIndex + dataRowBegin);
+            });
+
+        // update rows
+        managerTable
+            .getAllDataRange()
+            .getValues()
+            .forEach((managerRow: Array<unknown>) => {
+                if (util.getIsSkipRow(managerRow)) {
+                    return;
+                }
+
+                const managerRowId = util.stringify(managerRow[util.columnStringToNumber(rowIdColumnName) - 1]);
+
+                if (!managerRowId) {
+                    return;
+                }
+
+                const requestsRange: GoogleAppsScript.Spreadsheet.Range = requestsTable.getAllRequestsDataRange();
+                const requestsSheet = requestsTable.getRequestsSheet();
+
+                const requestsRangeRowIndex: number = requestsRange
+                    .getValues()
+                    .findIndex((requestsRow: Array<unknown>): boolean => {
+                        const requestsRowId = util.stringify(
+                            requestsRow[util.columnStringToNumber(rowIdColumnName) - 1]
+                        );
+
+                        return requestsRowId === managerRowId;
+                    });
+
+                const requestsRangeRowNumber: number =
+                    requestsRangeRowIndex === -1
+                        ? requestsSheet.getLastRow() + 1
+                        : requestsRangeRowIndex + dataRowBegin;
+
+                managerRow.forEach((managerRowData: unknown, managerColumnIndex: number) => {
+                    const currentColumnNumber = managerColumnIndex + 1;
+                    const isInManagerColumnRange = managerColumnList
+                        .map(util.columnStringToNumber)
+                        .includes(currentColumnNumber);
+                    const isInCommonColumnRange = commonColumnList
+                        .map(util.columnStringToNumber)
+                        .includes(currentColumnNumber);
+                    const isRowIdColumn = currentColumnNumber === util.columnStringToNumber(rowIdColumnName);
+
+                    if (isInManagerColumnRange || isInCommonColumnRange || isRowIdColumn) {
+                        requestsSheet.getRange(requestsRangeRowNumber, currentColumnNumber).setValue(managerRowData);
+                    }
+                });
+            });
     },
 };
 
