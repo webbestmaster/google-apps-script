@@ -10,18 +10,23 @@ const managerTable1Id = '11ZNH5S8DuZUobQU6sw-_Svx5vVt62I9CmxSSF_eGFDM';
 const managerTable2Id = '1C3pU0hsaGZnsztX72ZND6WRsHBA5EyY5ozEilL2CrOA';
 const managerTableIdList: Set<string> = new Set([managerTable1Id, managerTable2Id]);
 
+enum RowActionNameEnum {
+    remove = 'remove',
+    skip = 'skip',
+    updateOrAdd = 'update/add',
+}
+
 // ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
 const managerColumnList: Array<string> = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
 const requestsColumnList: Array<string> = ['J', 'K', 'L', 'M', 'N', 'O'];
 const commonColumnList: Array<string> = ['P', 'Q', 'R', 'S', 'T', 'U', 'V'];
 const rowIdColumnName = 'AZ';
-const skipRowColumnName = 'BA';
-const removeRowColumnName = 'BB';
+const actionRowColumnName = 'BA';
 
 // first row with data
 const dataRowBegin = 3;
 const firstColumnName = 'A';
-const [lastColumnName] = [rowIdColumnName, skipRowColumnName, removeRowColumnName].sort().reverse();
+const [lastColumnName] = [rowIdColumnName, actionRowColumnName].sort().reverse();
 
 Logger.log(lastColumnName);
 
@@ -99,14 +104,28 @@ const util = {
         return `${fromRandom}${fromTime}`.toLowerCase();
     },
     getIsSkipRow(row: Array<unknown>): boolean {
-        const skipRowRawValue = row[util.columnStringToNumber(skipRowColumnName) - 1];
+        const cellRawValue = util
+            .stringify(row[util.columnStringToNumber(actionRowColumnName) - 1])
+            .trim()
+            .toLowerCase();
 
-        return skipRowRawValue === true;
+        return cellRawValue === RowActionNameEnum.skip;
     },
     getIsRemoveRow(row: Array<unknown>): boolean {
-        const removeRowRawValue = row[util.columnStringToNumber(removeRowColumnName) - 1];
+        const cellRawValue = util
+            .stringify(row[util.columnStringToNumber(actionRowColumnName) - 1])
+            .trim()
+            .toLowerCase();
 
-        return removeRowRawValue === true;
+        return cellRawValue === RowActionNameEnum.remove;
+    },
+    getIsUpdateOrAdd(row: Array<unknown>): boolean {
+        const cellRawValue = util
+            .stringify(row[util.columnStringToNumber(actionRowColumnName) - 1])
+            .trim()
+            .toLowerCase();
+
+        return cellRawValue === RowActionNameEnum.updateOrAdd;
     },
     // eslint-disable-next-line max-statements, complexity
     stringify(value: unknown): string {
@@ -223,7 +242,7 @@ const managerTable = {
             .getAllDataRange()
             .getValues()
             .forEach((managerRow: Array<unknown>) => {
-                if (util.getIsSkipRow(managerRow) || !util.getIsRemoveRow(managerRow)) {
+                if (!util.getIsRemoveRow(managerRow)) {
                     return;
                 }
 
@@ -258,7 +277,7 @@ const managerTable = {
             .getAllDataRange()
             .getValues()
             .forEach((managerRow: Array<unknown>) => {
-                if (util.getIsSkipRow(managerRow) || !util.getIsRemoveRow(managerRow)) {
+                if (!util.getIsRemoveRow(managerRow)) {
                     return;
                 }
 
@@ -293,7 +312,7 @@ const managerTable = {
             .getAllDataRange()
             .getValues()
             .forEach((managerRow: Array<unknown>) => {
-                if (util.getIsSkipRow(managerRow)) {
+                if (!util.getIsUpdateOrAdd(managerRow)) {
                     return;
                 }
 
