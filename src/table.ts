@@ -21,12 +21,12 @@ const managerColumnList: Array<string> = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'
 const requestsColumnList: Array<string> = ['J', 'K', 'L', 'M', 'N', 'O'];
 const commonColumnList: Array<string> = ['P', 'Q', 'R', 'S', 'T', 'U', 'V'];
 const rowIdColumnName = 'AZ';
-const actionRowColumnName = 'BA';
+const rowActionColumnName = 'BA';
 
 // first row with data
 const dataRowBegin = 3;
 const firstColumnName = 'A';
-const [lastColumnName] = [rowIdColumnName, actionRowColumnName].sort().reverse();
+const [lastColumnName] = [rowIdColumnName, rowActionColumnName].sort().reverse();
 
 Logger.log(lastColumnName);
 
@@ -105,7 +105,7 @@ const util = {
     },
     getIsSkipRow(row: Array<unknown>): boolean {
         const cellRawValue = util
-            .stringify(row[util.columnStringToNumber(actionRowColumnName) - 1])
+            .stringify(row[util.columnStringToNumber(rowActionColumnName) - 1])
             .trim()
             .toLowerCase();
 
@@ -113,7 +113,7 @@ const util = {
     },
     getIsRemoveRow(row: Array<unknown>): boolean {
         const cellRawValue = util
-            .stringify(row[util.columnStringToNumber(actionRowColumnName) - 1])
+            .stringify(row[util.columnStringToNumber(rowActionColumnName) - 1])
             .trim()
             .toLowerCase();
 
@@ -121,7 +121,7 @@ const util = {
     },
     getIsUpdateOrAdd(row: Array<unknown>): boolean {
         const cellRawValue = util
-            .stringify(row[util.columnStringToNumber(actionRowColumnName) - 1])
+            .stringify(row[util.columnStringToNumber(rowActionColumnName) - 1])
             .trim()
             .toLowerCase();
 
@@ -187,15 +187,10 @@ const mainTable = {
         // eslint-disable-next-line complexity
         range.getValues().forEach((row: Array<unknown>, rowIndex: number) => {
             const rwoId = util.stringify(row[util.columnStringToNumber(rowIdColumnName) - 1]);
+            const rowAction = util.stringify(row[util.columnStringToNumber(rowActionColumnName) - 1]);
             const rowNumber: number = rowIndex + dataRowBegin;
-            const hasRowValue =
-                row
-                    .join('')
-                    .replace(rwoId, '')
-                    .replace(/true|false/gi, '')
-                    .trim().length > 0;
+            const hasRowValue = row.join('').replace(rwoId, '').replace(rowAction, '').trim().length > 0;
             const cellIdRange = sheet.getRange(`${rowIdColumnName}${rowNumber}`);
-            // const cellTableIdRange = sheet.getRange(`${tableIdColumnName}${rowNumber}`);
 
             if (hasRowValue && rwoId) {
                 return;
