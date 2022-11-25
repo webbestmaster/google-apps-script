@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unused-vars, no-unused-vars, @typescript-eslint/no-use-before-define, sort-keys */
+/* eslint-disable @typescript-eslint/no-unused-vars, no-unused-vars, @typescript-eslint/no-use-before-define, sort-keys, unicorn/prefer-set-has */
 
 /* global Logger, SpreadsheetApp, GoogleAppsScript */
 
@@ -8,13 +8,21 @@ const requestsSheetName = 'Requests';
 
 const managerTable1Id = '11ZNH5S8DuZUobQU6sw-_Svx5vVt62I9CmxSSF_eGFDM';
 const managerTable2Id = '1C3pU0hsaGZnsztX72ZND6WRsHBA5EyY5ozEilL2CrOA';
-const managerTableIdList: Set<string> = new Set([managerTable1Id, managerTable2Id]);
+const managerTableIdList: Array<string> = [managerTable1Id, managerTable2Id];
 
 enum RowActionNameEnum {
     remove = 'remove',
     skip = 'skip',
     updateOrAdd = 'update/add',
 }
+
+type RowDataType = {
+    rowDataList: Array<unknown>;
+    rowId: string;
+    rowNumber: number;
+    sheet: GoogleAppsScript.Spreadsheet.Sheet;
+    spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet;
+};
 
 // ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
 const managerColumnList: Array<string> = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
@@ -27,6 +35,8 @@ const rowActionColumnName = 'BA';
 const dataRowBegin = 3;
 const firstColumnName = 'A';
 const [lastColumnName] = [rowIdColumnName, rowActionColumnName].sort().reverse();
+
+const allDataRange = `${firstColumnName}${dataRowBegin}:${lastColumnName}`;
 
 Logger.log(lastColumnName);
 
@@ -90,7 +100,7 @@ const util = {
     getIsManagerSpreadsheet(): boolean {
         const spreadsheetId = SpreadsheetApp.getActive().getId();
 
-        return managerTableIdList.has(spreadsheetId);
+        return managerTableIdList.includes(spreadsheetId);
     },
     getIsRequestsSpreadsheet(): boolean {
         const spreadsheetId = SpreadsheetApp.getActive().getId();
@@ -104,26 +114,17 @@ const util = {
         return `${fromRandom}${fromTime}`.toLowerCase();
     },
     getIsSkipRow(row: Array<unknown>): boolean {
-        const cellRawValue = util
-            .stringify(row[util.columnStringToNumber(rowActionColumnName) - 1])
-            .trim()
-            .toLowerCase();
+        const cellRawValue = util.stringify(row[rowActionColumnIndex]).trim().toLowerCase();
 
         return cellRawValue === RowActionNameEnum.skip;
     },
     getIsRemoveRow(row: Array<unknown>): boolean {
-        const cellRawValue = util
-            .stringify(row[util.columnStringToNumber(rowActionColumnName) - 1])
-            .trim()
-            .toLowerCase();
+        const cellRawValue = util.stringify(row[rowActionColumnIndex]).trim().toLowerCase();
 
         return cellRawValue === RowActionNameEnum.remove;
     },
     getIsUpdateOrAdd(row: Array<unknown>): boolean {
-        const cellRawValue = util
-            .stringify(row[util.columnStringToNumber(rowActionColumnName) - 1])
-            .trim()
-            .toLowerCase();
+        const cellRawValue = util.stringify(row[rowActionColumnIndex]).trim().toLowerCase();
 
         return cellRawValue === RowActionNameEnum.updateOrAdd;
     },
@@ -175,19 +176,19 @@ console.log(columnNumberToString(702));
 console.log(columnStringToNumber('zz'));
 */
 
+const rowIdColumnIndex = util.columnStringToNumber(rowIdColumnName) - 1;
+const rowActionColumnIndex = util.columnStringToNumber(rowActionColumnName) - 1;
+
 const mainTable = {
     updateRowsId() {
-        const spreadsheetApp: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.getActive();
-        const sheet: GoogleAppsScript.Spreadsheet.Sheet = spreadsheetApp.getActiveSheet();
+        const sheet: GoogleAppsScript.Spreadsheet.Sheet = SpreadsheetApp.getActiveSheet();
 
-        const range: GoogleAppsScript.Spreadsheet.Range = sheet.getRange(
-            `${firstColumnName}${dataRowBegin}:${lastColumnName}`
-        );
+        const range: GoogleAppsScript.Spreadsheet.Range = sheet.getRange(allDataRange);
 
         // eslint-disable-next-line complexity
         range.getValues().forEach((row: Array<unknown>, rowIndex: number) => {
-            const rwoId = util.stringify(row[util.columnStringToNumber(rowIdColumnName) - 1]);
-            const rowAction = util.stringify(row[util.columnStringToNumber(rowActionColumnName) - 1]);
+            const rwoId = util.stringify(row[rowIdColumnIndex]);
+            const rowAction = util.stringify(row[rowActionColumnIndex]);
             const rowNumber: number = rowIndex + dataRowBegin;
             const hasRowValue = row.join('').replace(rwoId, '').replace(rowAction, '').trim().length > 0;
             const cellIdRange = sheet.getRange(`${rowIdColumnName}${rowNumber}`);
@@ -210,17 +211,51 @@ const mainTable = {
             }
         });
     },
+    getRowDataById(searchingRowId: string, tableIdList: Array<string>): RowDataType {
+        let rowData: RowDataType = {
+            rowId: '',
+            rowNumber: 0,
+            spreadsheet: SpreadsheetApp.getActive(),
+            rowDataList: [],
+            sheet: SpreadsheetApp.getActiveSheet(),
+        };
+
+        tableIdList.some((spreadsheetId: string): boolean => {
+            const spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+            const sheetList: Array<GoogleAppsScript.Spreadsheet.Sheet> = spreadsheet.getSheets();
+
+            return sheetList.some((sheet: GoogleAppsScript.Spreadsheet.Sheet): boolean => {
+                const range: GoogleAppsScript.Spreadsheet.Range = sheet.getRange(allDataRange);
+
+                return range.getValues().some((row: Array<unknown>, rowIndex: number): boolean => {
+                    const rowId = util.stringify(row[rowIdColumnIndex]);
+
+                    if (rowId !== searchingRowId) {
+                        return false;
+                    }
+
+                    rowData = {
+                        rowId,
+                        rowNumber: rowIndex + dataRowBegin,
+                        spreadsheet,
+                        rowDataList: [...row],
+                        sheet,
+                    };
+
+                    return true;
+                });
+            });
+        });
+
+        return rowData;
+    },
 };
 
 const managerTable = {
     getAllDataRange(): GoogleAppsScript.Spreadsheet.Range {
-        const spreadsheetApp: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.getActive();
-        const sheet: GoogleAppsScript.Spreadsheet.Sheet = spreadsheetApp.getActiveSheet();
-        const range: GoogleAppsScript.Spreadsheet.Range = sheet.getRange(
-            `${firstColumnName}${dataRowBegin}:${lastColumnName}`
-        );
+        const sheet: GoogleAppsScript.Spreadsheet.Sheet = SpreadsheetApp.getActiveSheet();
 
-        return range;
+        return sheet.getRange(allDataRange);
     },
 
     makeUiMenuForManager() {
@@ -241,7 +276,7 @@ const managerTable = {
                     return;
                 }
 
-                const managerRowId = util.stringify(managerRow[util.columnStringToNumber(rowIdColumnName) - 1]);
+                const managerRowId = util.stringify(managerRow[rowIdColumnIndex]);
 
                 if (!managerRowId) {
                     return;
@@ -253,9 +288,7 @@ const managerTable = {
                 const requestsRangeRowIndex: number = requestsRange
                     .getValues()
                     .findIndex((requestsRow: Array<unknown>): boolean => {
-                        const requestsRowId = util.stringify(
-                            requestsRow[util.columnStringToNumber(rowIdColumnName) - 1]
-                        );
+                        const requestsRowId = util.stringify(requestsRow[rowIdColumnIndex]);
 
                         return requestsRowId === managerRowId;
                     });
@@ -276,21 +309,19 @@ const managerTable = {
                     return;
                 }
 
-                const managerRowId = util.stringify(managerRow[util.columnStringToNumber(rowIdColumnName) - 1]);
+                const managerRowId = util.stringify(managerRow[rowIdColumnIndex]);
 
                 if (!managerRowId) {
                     return;
                 }
 
                 const managerRemoveRange: GoogleAppsScript.Spreadsheet.Range = managerTable.getAllDataRange();
-                const sheet: GoogleAppsScript.Spreadsheet.Sheet = SpreadsheetApp.getActive().getActiveSheet();
+                const sheet: GoogleAppsScript.Spreadsheet.Sheet = SpreadsheetApp.getActiveSheet();
 
                 const removeManagerRangeRowIndex: number = managerRemoveRange
                     .getValues()
                     .findIndex((removeManagerRow: Array<unknown>): boolean => {
-                        const removeManagerRowId = util.stringify(
-                            removeManagerRow[util.columnStringToNumber(rowIdColumnName) - 1]
-                        );
+                        const removeManagerRowId = util.stringify(removeManagerRow[rowIdColumnIndex]);
 
                         return removeManagerRowId === managerRowId;
                     });
@@ -311,7 +342,7 @@ const managerTable = {
                     return;
                 }
 
-                const managerRowId = util.stringify(managerRow[util.columnStringToNumber(rowIdColumnName) - 1]);
+                const managerRowId = util.stringify(managerRow[rowIdColumnIndex]);
 
                 if (!managerRowId) {
                     return;
@@ -323,9 +354,7 @@ const managerTable = {
                 const requestsRangeRowIndex: number = requestsRange
                     .getValues()
                     .findIndex((requestsRow: Array<unknown>): boolean => {
-                        const requestsRowId = util.stringify(
-                            requestsRow[util.columnStringToNumber(rowIdColumnName) - 1]
-                        );
+                        const requestsRowId = util.stringify(requestsRow[rowIdColumnIndex]);
 
                         return requestsRowId === managerRowId;
                     });
@@ -357,11 +386,7 @@ const requestsTable = {
     getAllRequestsDataRange(): GoogleAppsScript.Spreadsheet.Range {
         const requestsSheet = requestsTable.getRequestsSheet();
 
-        const requestsRange: GoogleAppsScript.Spreadsheet.Range = requestsSheet.getRange(
-            `${firstColumnName}${dataRowBegin}:${lastColumnName}`
-        );
-
-        return requestsRange;
+        return requestsSheet.getRange(allDataRange);
     },
 
     getRequestsSheet(): GoogleAppsScript.Spreadsheet.Sheet {
