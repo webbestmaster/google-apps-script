@@ -281,16 +281,13 @@ const managerTable = {
 
     // eslint-disable-next-line sonarjs/cognitive-complexity
     pushDataToRequestTable() {
-        const progressFullCount = managerTable.getAllDataRange().getValues().length * 3;
-        let progressCount = 0;
+        SpreadsheetApp.getActiveSpreadsheet().toast('Done: 0/3', 'Syncing...', -1);
 
         // remove rows in requests table
         managerTable
             .getAllDataRange()
             .getValues()
             .forEach((managerRow: Array<unknown>) => {
-                util.showProgress('Syncing... ', ++progressCount / progressFullCount);
-
                 if (!util.getIsRemoveRow(managerRow)) {
                     return;
                 }
@@ -306,13 +303,13 @@ const managerTable = {
                 requestsRowData.sheet?.deleteRow(requestsRowData.rowNumber);
             });
 
+        SpreadsheetApp.getActiveSpreadsheet().toast('Done: 1/3', 'Syncing...', -1);
+
         // remove rows in manager table
         managerTable
             .getAllDataRange()
             .getValues()
             .forEach((managerRow: Array<unknown>) => {
-                util.showProgress('Syncing... ', ++progressCount / progressFullCount);
-
                 if (!util.getIsRemoveRow(managerRow)) {
                     return;
                 }
@@ -328,13 +325,13 @@ const managerTable = {
                 managerRowData.sheet?.deleteRow(managerRowData.rowNumber);
             });
 
+        SpreadsheetApp.getActiveSpreadsheet().toast('Done: 2/3', 'Syncing...', -1);
+
         // update rows
         managerTable
             .getAllDataRange()
             .getValues()
             .forEach((managerRow: Array<unknown>) => {
-                util.showProgress('Syncing... ', ++progressCount / progressFullCount);
-
                 if (!util.getIsUpdateOrAdd(managerRow)) {
                     return;
                 }
@@ -363,7 +360,7 @@ const managerTable = {
                 });
             });
 
-        SpreadsheetApp.getActiveSpreadsheet().toast('', 'Synced!');
+        SpreadsheetApp.getActiveSpreadsheet().toast('Done: 3/3', 'Synced!', 2);
     },
 };
 
@@ -398,16 +395,13 @@ const requestsTable = {
 
     // eslint-disable-next-line sonarjs/cognitive-complexity
     pushDataToManagerTable() {
-        const progressFullCount = requestsTable.getAllDataRange().getValues().length * 3;
-        let progressCount = 0;
+        SpreadsheetApp.getActiveSpreadsheet().toast('Done: 0/3', 'Syncing...', -1);
 
         // remove rows in requests table
         requestsTable
             .getAllDataRange()
             .getValues()
             .forEach((requestsRow: Array<unknown>) => {
-                util.showProgress('Syncing... ', ++progressCount / progressFullCount);
-
                 if (!util.getIsRemoveRow(requestsRow)) {
                     return;
                 }
@@ -425,13 +419,13 @@ const requestsTable = {
 */
             });
 
+        SpreadsheetApp.getActiveSpreadsheet().toast('Done: 1/3', 'Syncing...', -1);
+
         // remove rows in manager table
         requestsTable
             .getAllDataRange()
             .getValues()
             .forEach((requestsRow: Array<unknown>) => {
-                util.showProgress('Syncing... ', ++progressCount / progressFullCount);
-
                 if (!util.getIsRemoveRow(requestsRow)) {
                     return;
                 }
@@ -449,13 +443,13 @@ const requestsTable = {
 */
             });
 
+        SpreadsheetApp.getActiveSpreadsheet().toast('Done: 2/3', 'Syncing...', -1);
+
         // update rows
         requestsTable
             .getAllDataRange()
             .getValues()
             .forEach((requestsRow: Array<unknown>) => {
-                util.showProgress('Syncing... ', ++progressCount / progressFullCount);
-
                 if (!util.getIsRemoveRow(requestsRow)) {
                     return;
                 }
@@ -486,7 +480,7 @@ const requestsTable = {
 */
             });
 
-        SpreadsheetApp.getActiveSpreadsheet().toast('', 'Synced!');
+        SpreadsheetApp.getActiveSpreadsheet().toast('Done: 3/3', 'Synced!', 2);
     },
 
     /*
