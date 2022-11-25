@@ -20,8 +20,8 @@ type RowDataType = {
     rowDataList: Array<unknown>;
     rowId: string;
     rowNumber: number;
-    sheet: GoogleAppsScript.Spreadsheet.Sheet;
-    spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet;
+    sheet: GoogleAppsScript.Spreadsheet.Sheet | null;
+    spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet | null;
 };
 
 // ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
@@ -178,6 +178,9 @@ console.log(columnStringToNumber('zz'));
 
 const rowIdColumnIndex = util.columnStringToNumber(rowIdColumnName) - 1;
 const rowActionColumnIndex = util.columnStringToNumber(rowActionColumnName) - 1;
+const managerColumnNumberList: Array<number> = managerColumnList.map<number>(util.columnStringToNumber);
+const requestsColumnNumberList: Array<number> = requestsColumnList.map<number>(util.columnStringToNumber);
+const commonColumnNumberList: Array<number> = commonColumnList.map<number>(util.columnStringToNumber);
 
 const mainTable = {
     updateRowsId() {
@@ -215,9 +218,9 @@ const mainTable = {
         let rowData: RowDataType = {
             rowId: '',
             rowNumber: 0,
-            spreadsheet: SpreadsheetApp.getActive(),
+            spreadsheet: null,
             rowDataList: [],
-            sheet: SpreadsheetApp.getActiveSheet(),
+            sheet: null,
         };
 
         tableIdList.some((spreadsheetId: string): boolean => {
@@ -282,22 +285,9 @@ const managerTable = {
                     return;
                 }
 
-                const requestsRange: GoogleAppsScript.Spreadsheet.Range = requestsTable.getAllRequestsDataRange();
-                const requestsSheet = requestsTable.getRequestsSheet();
+                const requestsRowData = mainTable.getRowDataById(managerRowId, [requestsTableId]);
 
-                const requestsRangeRowIndex: number = requestsRange
-                    .getValues()
-                    .findIndex((requestsRow: Array<unknown>): boolean => {
-                        const requestsRowId = util.stringify(requestsRow[rowIdColumnIndex]);
-
-                        return requestsRowId === managerRowId;
-                    });
-
-                if (requestsRangeRowIndex === -1) {
-                    return;
-                }
-
-                requestsSheet.deleteRow(requestsRangeRowIndex + dataRowBegin);
+                requestsRowData.sheet?.deleteRow(requestsRowData.rowNumber);
             });
 
         // remove rows in manager table
@@ -315,22 +305,9 @@ const managerTable = {
                     return;
                 }
 
-                const managerRemoveRange: GoogleAppsScript.Spreadsheet.Range = managerTable.getAllDataRange();
-                const sheet: GoogleAppsScript.Spreadsheet.Sheet = SpreadsheetApp.getActiveSheet();
+                const managerRowData = mainTable.getRowDataById(managerRowId, [SpreadsheetApp.getActive().getId()]);
 
-                const removeManagerRangeRowIndex: number = managerRemoveRange
-                    .getValues()
-                    .findIndex((removeManagerRow: Array<unknown>): boolean => {
-                        const removeManagerRowId = util.stringify(removeManagerRow[rowIdColumnIndex]);
-
-                        return removeManagerRowId === managerRowId;
-                    });
-
-                if (removeManagerRangeRowIndex === -1) {
-                    return;
-                }
-
-                sheet.deleteRow(removeManagerRangeRowIndex + dataRowBegin);
+                managerRowData.sheet?.deleteRow(managerRowData.rowNumber);
             });
 
         // update rows
@@ -348,31 +325,17 @@ const managerTable = {
                     return;
                 }
 
-                const requestsRange: GoogleAppsScript.Spreadsheet.Range = requestsTable.getAllRequestsDataRange();
                 const requestsSheet = requestsTable.getRequestsSheet();
-
-                const requestsRangeRowIndex: number = requestsRange
-                    .getValues()
-                    .findIndex((requestsRow: Array<unknown>): boolean => {
-                        const requestsRowId = util.stringify(requestsRow[rowIdColumnIndex]);
-
-                        return requestsRowId === managerRowId;
-                    });
-
-                const requestsRangeRowNumber: number =
-                    requestsRangeRowIndex === -1
-                        ? requestsSheet.getLastRow() + 1
-                        : requestsRangeRowIndex + dataRowBegin;
+                const requestsRowData = mainTable.getRowDataById(managerRowId, [requestsTableId]);
+                const requestsRangeRowNumber: number = requestsRowData.sheet
+                    ? requestsRowData.rowNumber
+                    : requestsSheet.getLastRow() + 1;
 
                 managerRow.forEach((managerRowData: unknown, managerColumnIndex: number) => {
                     const currentColumnNumber = managerColumnIndex + 1;
-                    const isInManagerColumnRange = managerColumnList
-                        .map(util.columnStringToNumber)
-                        .includes(currentColumnNumber);
-                    const isInCommonColumnRange = commonColumnList
-                        .map(util.columnStringToNumber)
-                        .includes(currentColumnNumber);
-                    const isRowIdColumn = currentColumnNumber === util.columnStringToNumber(rowIdColumnName);
+                    const isInManagerColumnRange = managerColumnNumberList.includes(currentColumnNumber);
+                    const isInCommonColumnRange = commonColumnNumberList.includes(currentColumnNumber);
+                    const isRowIdColumn = managerColumnIndex === rowIdColumnIndex;
 
                     if (isInManagerColumnRange || isInCommonColumnRange || isRowIdColumn) {
                         requestsSheet.getRange(requestsRangeRowNumber, currentColumnNumber).setValue(managerRowData);
