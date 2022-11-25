@@ -397,30 +397,6 @@ const requestsTable = {
     pushDataToManagerTable() {
         SpreadsheetApp.getActiveSpreadsheet().toast('Done: 0/3', 'Syncing...', -1);
 
-        // remove rows in requests table
-        requestsTable
-            .getAllDataRange()
-            .getValues()
-            .forEach((requestsRow: Array<unknown>) => {
-                if (!util.getIsRemoveRow(requestsRow)) {
-                    return;
-                }
-
-                /*
-                const managerRowId = util.stringify(managerRow[rowIdColumnIndex]);
-
-                if (!managerRowId) {
-                    return;
-                }
-
-                const requestsRowData = mainTable.getRowDataById(managerRowId, [requestsTableId]);
-
-                requestsRowData.sheet?.deleteRow(requestsRowData.rowNumber);
-*/
-            });
-
-        SpreadsheetApp.getActiveSpreadsheet().toast('Done: 1/3', 'Syncing...', -1);
-
         // remove rows in manager table
         requestsTable
             .getAllDataRange()
@@ -430,17 +406,37 @@ const requestsTable = {
                     return;
                 }
 
-                /*
-                const managerRowId = util.stringify(managerRow[rowIdColumnIndex]);
+                const requestsRowId = util.stringify(requestsRow[rowIdColumnIndex]);
 
-                if (!managerRowId) {
+                if (!requestsRowId) {
                     return;
                 }
 
-                const managerRowData = mainTable.getRowDataById(managerRowId, [SpreadsheetApp.getActive().getId()]);
+                const managerRowData = mainTable.getRowDataById(requestsRowId, managerTableIdList);
 
                 managerRowData.sheet?.deleteRow(managerRowData.rowNumber);
-*/
+            });
+
+        SpreadsheetApp.getActiveSpreadsheet().toast('Done: 1/3', 'Syncing...', -1);
+
+        // remove rows in requests table
+        requestsTable
+            .getAllDataRange()
+            .getValues()
+            .forEach((requestsRow: Array<unknown>) => {
+                if (!util.getIsRemoveRow(requestsRow)) {
+                    return;
+                }
+
+                const requestsRowId = util.stringify(requestsRow[rowIdColumnIndex]);
+
+                if (!requestsRowId) {
+                    return;
+                }
+
+                const requestsRowData = mainTable.getRowDataById(requestsRowId, [requestsTableId]);
+
+                requestsRowData.sheet?.deleteRow(requestsRowData.rowNumber);
             });
 
         SpreadsheetApp.getActiveSpreadsheet().toast('Done: 2/3', 'Syncing...', -1);
@@ -450,34 +446,29 @@ const requestsTable = {
             .getAllDataRange()
             .getValues()
             .forEach((requestsRow: Array<unknown>) => {
-                if (!util.getIsRemoveRow(requestsRow)) {
+                const requestsRowId = util.stringify(requestsRow[rowIdColumnIndex]);
+
+                if (!requestsRowId) {
                     return;
                 }
 
-                /*
-                const managerRowId = util.stringify(managerRow[rowIdColumnIndex]);
+                const managerRowData = mainTable.getRowDataById(requestsRowId, managerTableIdList);
+                const {sheet: managerSheet, rowNumber: managerRowNumber} = managerRowData;
 
-                if (!managerRowId) {
+                if (!managerSheet) {
+                    appUI.alert(`Can not find row with id ${requestsRowId}`);
                     return;
                 }
 
-                const requestsSheet = requestsTable.getRequestsSheet();
-                const requestsRowData = mainTable.getRowDataById(managerRowId, [requestsTableId]);
-                const requestsRangeRowNumber: number = requestsRowData.sheet
-                    ? requestsRowData.rowNumber
-                    : requestsSheet.getLastRow() + 1;
-
-                managerRow.forEach((managerRowData: unknown, managerColumnIndex: number) => {
-                    const currentColumnNumber = managerColumnIndex + 1;
-                    const isInManagerColumnRange = managerColumnNumberList.includes(currentColumnNumber);
+                requestsRow.forEach((requestsRowData: unknown, requestColumnIndex: number) => {
+                    const currentColumnNumber = requestColumnIndex + 1;
+                    const isInRequestsColumnRange = requestsColumnNumberList.includes(currentColumnNumber);
                     const isInCommonColumnRange = commonColumnNumberList.includes(currentColumnNumber);
-                    const isRowIdColumn = managerColumnIndex === rowIdColumnIndex;
 
-                    if (isInManagerColumnRange || isInCommonColumnRange || isRowIdColumn) {
-                        requestsSheet.getRange(requestsRangeRowNumber, currentColumnNumber).setValue(managerRowData);
+                    if (isInRequestsColumnRange || isInCommonColumnRange) {
+                        managerSheet.getRange(managerRowNumber, currentColumnNumber).setValue(requestsRowData);
                     }
                 });
-*/
             });
 
         SpreadsheetApp.getActiveSpreadsheet().toast('Done: 3/3', 'Synced!', 2);
