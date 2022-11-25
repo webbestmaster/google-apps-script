@@ -1,4 +1,12 @@
-/* eslint-disable @typescript-eslint/no-unused-vars, no-unused-vars, @typescript-eslint/no-use-before-define, sort-keys, unicorn/prefer-set-has */
+/* eslint-disable
+ @typescript-eslint/no-unused-vars,
+ no-unused-vars,
+ @typescript-eslint/no-use-before-define,
+ sort-keys,
+ unicorn/prefer-set-has,
+ no-plusplus,
+ sonarjs/no-duplicate-string
+*/
 
 /* global Logger, SpreadsheetApp, GoogleAppsScript */
 
@@ -87,6 +95,9 @@ const util = {
         return list[Math.floor(columnNumber / alphabetLength) - 1] + list[(columnNumber % alphabetLength) - 1];
     },
 */
+    showProgress(title: string, partOfProgress: number) {
+        SpreadsheetApp.getActiveSpreadsheet().toast('', `${title}${(partOfProgress * 100).toFixed(2)}`, -1);
+    },
     columnStringToNumber(columnStringRaw: string): number {
         const alphabet = 'abcdefghijklmnopqrstuvwxyz';
         const alphabetLength: number = alphabet.length;
@@ -270,11 +281,16 @@ const managerTable = {
 
     // eslint-disable-next-line sonarjs/cognitive-complexity
     pushDataToRequestTable() {
+        const progressFullCount = managerTable.getAllDataRange().getValues().length * 3;
+        let progressCount = 0;
+
         // remove rows in requests table
         managerTable
             .getAllDataRange()
             .getValues()
             .forEach((managerRow: Array<unknown>) => {
+                util.showProgress('Syncing... ', ++progressCount / progressFullCount);
+
                 if (!util.getIsRemoveRow(managerRow)) {
                     return;
                 }
@@ -295,6 +311,8 @@ const managerTable = {
             .getAllDataRange()
             .getValues()
             .forEach((managerRow: Array<unknown>) => {
+                util.showProgress('Syncing... ', ++progressCount / progressFullCount);
+
                 if (!util.getIsRemoveRow(managerRow)) {
                     return;
                 }
@@ -315,6 +333,8 @@ const managerTable = {
             .getAllDataRange()
             .getValues()
             .forEach((managerRow: Array<unknown>) => {
+                util.showProgress('Syncing... ', ++progressCount / progressFullCount);
+
                 if (!util.getIsUpdateOrAdd(managerRow)) {
                     return;
                 }
@@ -342,11 +362,13 @@ const managerTable = {
                     }
                 });
             });
+
+        SpreadsheetApp.getActiveSpreadsheet().toast('', 'Synced!');
     },
 };
 
 const requestsTable = {
-    getAllRequestsDataRange(): GoogleAppsScript.Spreadsheet.Range {
+    getAllDataRange(): GoogleAppsScript.Spreadsheet.Range {
         const requestsSheet = requestsTable.getRequestsSheet();
 
         return requestsSheet.getRange(allDataRange);
@@ -376,7 +398,95 @@ const requestsTable = {
 
     // eslint-disable-next-line sonarjs/cognitive-complexity
     pushDataToManagerTable() {
-        appUI.alert('pushDataToManagerTable');
+        const progressFullCount = requestsTable.getAllDataRange().getValues().length * 3;
+        let progressCount = 0;
+
+        // remove rows in requests table
+        requestsTable
+            .getAllDataRange()
+            .getValues()
+            .forEach((requestsRow: Array<unknown>) => {
+                util.showProgress('Syncing... ', ++progressCount / progressFullCount);
+
+                if (!util.getIsRemoveRow(requestsRow)) {
+                    return;
+                }
+
+                /*
+                const managerRowId = util.stringify(managerRow[rowIdColumnIndex]);
+
+                if (!managerRowId) {
+                    return;
+                }
+
+                const requestsRowData = mainTable.getRowDataById(managerRowId, [requestsTableId]);
+
+                requestsRowData.sheet?.deleteRow(requestsRowData.rowNumber);
+*/
+            });
+
+        // remove rows in manager table
+        requestsTable
+            .getAllDataRange()
+            .getValues()
+            .forEach((requestsRow: Array<unknown>) => {
+                util.showProgress('Syncing... ', ++progressCount / progressFullCount);
+
+                if (!util.getIsRemoveRow(requestsRow)) {
+                    return;
+                }
+
+                /*
+                const managerRowId = util.stringify(managerRow[rowIdColumnIndex]);
+
+                if (!managerRowId) {
+                    return;
+                }
+
+                const managerRowData = mainTable.getRowDataById(managerRowId, [SpreadsheetApp.getActive().getId()]);
+
+                managerRowData.sheet?.deleteRow(managerRowData.rowNumber);
+*/
+            });
+
+        // update rows
+        requestsTable
+            .getAllDataRange()
+            .getValues()
+            .forEach((requestsRow: Array<unknown>) => {
+                util.showProgress('Syncing... ', ++progressCount / progressFullCount);
+
+                if (!util.getIsRemoveRow(requestsRow)) {
+                    return;
+                }
+
+                /*
+                const managerRowId = util.stringify(managerRow[rowIdColumnIndex]);
+
+                if (!managerRowId) {
+                    return;
+                }
+
+                const requestsSheet = requestsTable.getRequestsSheet();
+                const requestsRowData = mainTable.getRowDataById(managerRowId, [requestsTableId]);
+                const requestsRangeRowNumber: number = requestsRowData.sheet
+                    ? requestsRowData.rowNumber
+                    : requestsSheet.getLastRow() + 1;
+
+                managerRow.forEach((managerRowData: unknown, managerColumnIndex: number) => {
+                    const currentColumnNumber = managerColumnIndex + 1;
+                    const isInManagerColumnRange = managerColumnNumberList.includes(currentColumnNumber);
+                    const isInCommonColumnRange = commonColumnNumberList.includes(currentColumnNumber);
+                    const isRowIdColumn = managerColumnIndex === rowIdColumnIndex;
+
+                    if (isInManagerColumnRange || isInCommonColumnRange || isRowIdColumn) {
+                        requestsSheet.getRange(requestsRangeRowNumber, currentColumnNumber).setValue(managerRowData);
+                    }
+                });
+*/
+            });
+
+        SpreadsheetApp.getActiveSpreadsheet().toast('', 'Synced!');
     },
 
     /*
