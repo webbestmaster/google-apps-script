@@ -18,9 +18,10 @@ const managerTable1Id = '11ZNH5S8DuZUobQU6sw-_Svx5vVt62I9CmxSSF_eGFDM';
 const managerTable2Id = '1C3pU0hsaGZnsztX72ZND6WRsHBA5EyY5ozEilL2CrOA';
 const managerTableIdList: Array<string> = [managerTable1Id, managerTable2Id];
 
-enum RowActionNameEnum {
+const enum RowActionNameEnum {
     remove = 'remove',
     skip = 'skip',
+    update = 'update',
     updateOrAdd = 'update/add',
 }
 
@@ -51,53 +52,6 @@ Logger.log(lastColumnName);
 const appUI: GoogleAppsScript.Base.Ui = SpreadsheetApp.getUi();
 
 const util = {
-    // eslint-disable-next-line max-statements, complexity
-    /*
-    columnNumberToString(columnNumber: number): string {
-        const alphabet = 'abcdefghijklmnopqrstuvwxyz';
-        const alphabetLength: number = alphabet.length;
-        const list: Array<string> = [...alphabet.toUpperCase()];
-        const lastLetter = list[alphabetLength - 1];
-        const minColumnNumber = 1;
-        const maxColumnNumber = alphabetLength * (alphabetLength + 1);
-
-        if (Math.round(columnNumber) !== columnNumber) {
-            const errorMessage = `The column number is not integer. Column number is ${columnNumber}`;
-
-            appUI.alert(errorMessage);
-            throw new Error(errorMessage);
-        }
-
-        if (columnNumber < minColumnNumber) {
-            // eslint-disable-next-line max-len
-            const errorMessage = `The column number is too small. Column number is ${columnNumber}, but min is ${minColumnNumber}.`;
-
-            appUI.alert(errorMessage);
-            throw new Error(errorMessage);
-        }
-
-        if (columnNumber > maxColumnNumber) {
-            // eslint-disable-next-line max-len
-            const errorMessage = `The column number is too big. Column number is ${columnNumber}, but max is ${maxColumnNumber}.`;
-
-            appUI.alert(errorMessage);
-            throw new Error(errorMessage);
-        }
-
-        if (columnNumber === maxColumnNumber) {
-            return lastLetter + lastLetter;
-        }
-
-        if (columnNumber <= alphabetLength) {
-            return list[columnNumber - 1];
-        }
-
-        return list[Math.floor(columnNumber / alphabetLength) - 1] + list[(columnNumber % alphabetLength) - 1];
-    },
-*/
-    showProgress(title: string, partOfProgress: number) {
-        SpreadsheetApp.getActiveSpreadsheet().toast('', `${title}${(partOfProgress * 100).toFixed(2)}`, -1);
-    },
     columnStringToNumber(columnStringRaw: string): number {
         const alphabet = 'abcdefghijklmnopqrstuvwxyz';
         const alphabetLength: number = alphabet.length;
@@ -139,6 +93,11 @@ const util = {
 
         return cellRawValue === RowActionNameEnum.updateOrAdd;
     },
+    getIsUpdate(row: Array<unknown>): boolean {
+        const cellRawValue = util.stringify(row[rowActionColumnIndex]).trim().toLowerCase();
+
+        return cellRawValue === RowActionNameEnum.update;
+    },
     // eslint-disable-next-line max-statements, complexity
     stringify(value: unknown): string {
         if (typeof value === 'string') {
@@ -160,32 +119,6 @@ const util = {
         return String(value);
     },
 };
-
-/*
-console.log(columnNumberToString(1));
-console.log(columnStringToNumber('a'));
-
-console.log(columnNumberToString(5));
-console.log(columnStringToNumber('e'));
-
-console.log(columnNumberToString(57));
-console.log(columnStringToNumber('be'));
-
-console.log(columnNumberToString(26));
-console.log(columnStringToNumber('z'));
-
-console.log(columnNumberToString(27));
-console.log(columnStringToNumber('aa'));
-
-console.log(columnNumberToString(700));
-console.log(columnStringToNumber('zx'));
-
-console.log(columnNumberToString(701));
-console.log(columnStringToNumber('zy'));
-
-console.log(columnNumberToString(702));
-console.log(columnStringToNumber('zz'));
-*/
 
 const rowIdColumnIndex = util.columnStringToNumber(rowIdColumnName) - 1;
 const rowActionColumnIndex = util.columnStringToNumber(rowActionColumnName) - 1;
@@ -446,6 +379,10 @@ const requestsTable = {
             .getAllDataRange()
             .getValues()
             .forEach((requestsRow: Array<unknown>) => {
+                if (!util.getIsUpdate(requestsRow)) {
+                    return;
+                }
+
                 const requestsRowId = util.stringify(requestsRow[rowIdColumnIndex]);
 
                 if (!requestsRowId) {
@@ -473,16 +410,6 @@ const requestsTable = {
 
         SpreadsheetApp.getActiveSpreadsheet().toast('Done: 3/3', 'Synced!', 2);
     },
-
-    /*
-        getRequestsRange(a1Notation: string): GoogleAppsScript.Spreadsheet.Range {
-            const requestsSheet: GoogleAppsScript.Spreadsheet.Sheet | null = requestsTable.getRequestsSheet();
-
-            const requestsRange: GoogleAppsScript.Spreadsheet.Range = requestsSheet.getRange(a1Notation);
-
-            return requestsRange;
-        },
-    */
 };
 
 // will call on document open
