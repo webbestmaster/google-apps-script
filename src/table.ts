@@ -15,8 +15,10 @@ const requestsTableId = '1E5BIjJ6cpFsSl9fVcBvt9x8Bk7-uhqrz64jFbmqg5GI';
 const requestsSheetName = 'Requests';
 
 const managerTable1Id = '11ZNH5S8DuZUobQU6sw-_Svx5vVt62I9CmxSSF_eGFDM';
-const managerTable2Id = '1C3pU0hsaGZnsztX72ZND6WRsHBA5EyY5ozEilL2CrOA';
-const managerTableIdList: Array<string> = [managerTable1Id, managerTable2Id];
+const managerTableIdList: Array<string> = [managerTable1Id];
+const bgColorSynced = '#00D100';
+const bgColorChanged = '#ECF87F';
+const bgColorDefault = '#FFFFFF';
 
 const enum RowActionNameEnum {
     remove = 'remove',
@@ -34,16 +36,17 @@ type RowDataType = {
 };
 
 // ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
-const managerColumnList: Array<string> = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
-const requestsColumnList: Array<string> = ['J', 'K', 'L', 'M', 'N', 'O'];
-const commonColumnList: Array<string> = ['P', 'Q', 'R', 'S', 'T', 'U', 'V'];
-const rowIdColumnName = 'AZ';
-const rowActionColumnName = 'BA';
+const managerColumnList: Array<string> = ['A', 'B', 'C', 'E', 'G', 'H', 'I', 'L', 'N', 'O', 'P', 'Q'];
+const requestsColumnList: Array<string> = ['R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y'];
+const commonColumnList: Array<string> = ['D', 'F', 'J', 'K', 'M'];
+const rowIdColumnName = 'BF';
+const rowActionColumnName = 'A';
+const nonUpdatableColumnNameList: Array<string> = [rowActionColumnName];
 
 // first row with data
 const dataRowBegin = 3;
 const firstColumnName = 'A';
-const [lastColumnName] = [rowIdColumnName, rowActionColumnName].sort().reverse();
+const lastColumnName = rowIdColumnName;
 
 const allDataRange = `${firstColumnName}${dataRowBegin}:${lastColumnName}`;
 
@@ -118,6 +121,12 @@ const util = {
 
         return String(value);
     },
+    getIsSyncedCell(rowNumber: number, columnNumber: number): boolean {
+        const cell = SpreadsheetApp.getActiveSheet().getRange(rowNumber, columnNumber);
+        const cellBackgroundColor = cell.getBackground();
+
+        return cellBackgroundColor.toLowerCase() === bgColorSynced.toLowerCase();
+    },
 };
 
 const rowIdColumnIndex = util.columnStringToNumber(rowIdColumnName) - 1;
@@ -125,6 +134,7 @@ const rowActionColumnIndex = util.columnStringToNumber(rowActionColumnName) - 1;
 const managerColumnNumberList: Array<number> = managerColumnList.map<number>(util.columnStringToNumber);
 const requestsColumnNumberList: Array<number> = requestsColumnList.map<number>(util.columnStringToNumber);
 const commonColumnNumberList: Array<number> = commonColumnList.map<number>(util.columnStringToNumber);
+const nonUpdatableColumnNumberList: Array<number> = nonUpdatableColumnNameList.map<number>(util.columnStringToNumber);
 
 const mainTable = {
     updateRowsId() {
@@ -264,7 +274,7 @@ const managerTable = {
         managerTable
             .getAllDataRange()
             .getValues()
-            .forEach((managerRow: Array<unknown>) => {
+            .forEach((managerRow: Array<unknown>, managerRowIndex: number) => {
                 if (!util.getIsUpdateOrAdd(managerRow)) {
                     return;
                 }
@@ -277,18 +287,37 @@ const managerTable = {
 
                 const requestsSheet = requestsTable.getRequestsSheet();
                 const requestsRowData = mainTable.getRowDataById(managerRowId, [requestsTableId]);
-                const requestsRangeRowNumber: number = requestsRowData.sheet
-                    ? requestsRowData.rowNumber
-                    : requestsSheet.getLastRow() + 1;
+                const hasToMakeNewLine = !requestsRowData.sheet;
+                const requestsRangeRowNumber: number = hasToMakeNewLine
+                    ? requestsSheet.getLastRow() + 1
+                    : requestsRowData.rowNumber;
+                const requestsRangeRowBgColor: string = hasToMakeNewLine ? bgColorDefault : bgColorSynced;
 
+                // eslint-disable-next-line complexity
                 managerRow.forEach((managerRowData: unknown, managerColumnIndex: number) => {
                     const currentColumnNumber = managerColumnIndex + 1;
+                    const managerRowNumber = managerRowIndex + dataRowBegin;
                     const isInManagerColumnRange = managerColumnNumberList.includes(currentColumnNumber);
                     const isInCommonColumnRange = commonColumnNumberList.includes(currentColumnNumber);
                     const isRowIdColumn = managerColumnIndex === rowIdColumnIndex;
+                    const isNonUpdatableColumn = nonUpdatableColumnNumberList.includes(currentColumnNumber);
+
+                    if (isNonUpdatableColumn) {
+                        return;
+                    }
+
+                    if (util.getIsSyncedCell(managerRowNumber, currentColumnNumber)) {
+                        return;
+                    }
 
                     if (isInManagerColumnRange || isInCommonColumnRange || isRowIdColumn) {
-                        requestsSheet.getRange(requestsRangeRowNumber, currentColumnNumber).setValue(managerRowData);
+                        requestsSheet
+                            .getRange(requestsRangeRowNumber, currentColumnNumber)
+                            .setValue(managerRowData)
+                            .setBackground(requestsRangeRowBgColor);
+                        SpreadsheetApp.getActiveSheet()
+                            .getRange(managerRowNumber, currentColumnNumber)
+                            .setBackground(bgColorSynced);
                     }
                 });
             });
@@ -378,7 +407,7 @@ const requestsTable = {
         requestsTable
             .getAllDataRange()
             .getValues()
-            .forEach((requestsRow: Array<unknown>) => {
+            .forEach((requestsRow: Array<unknown>, requestsRowIndex: number) => {
                 if (!util.getIsUpdate(requestsRow)) {
                     return;
                 }
@@ -397,13 +426,27 @@ const requestsTable = {
                     return;
                 }
 
+                const requestsRangeRowNumber: number = requestsRowIndex + dataRowBegin;
+
                 requestsRow.forEach((requestsRowData: unknown, requestColumnIndex: number) => {
                     const currentColumnNumber = requestColumnIndex + 1;
                     const isInRequestsColumnRange = requestsColumnNumberList.includes(currentColumnNumber);
                     const isInCommonColumnRange = commonColumnNumberList.includes(currentColumnNumber);
+                    const isNonUpdatableColumn = nonUpdatableColumnNumberList.includes(currentColumnNumber);
+
+                    if (isNonUpdatableColumn) {
+                        return;
+                    }
+
+                    if (util.getIsSyncedCell(requestsRangeRowNumber, currentColumnNumber)) {
+                        return;
+                    }
 
                     if (isInRequestsColumnRange || isInCommonColumnRange) {
                         managerSheet.getRange(managerRowNumber, currentColumnNumber).setValue(requestsRowData);
+                        SpreadsheetApp.getActiveSheet()
+                            .getRange(requestsRangeRowNumber, currentColumnNumber)
+                            .setBackground(bgColorSynced);
                     }
                 });
             });
@@ -425,6 +468,12 @@ function onOpen() {
     mainTable.updateRowsId();
 }
 
-function onEdit() {
+type OnEditEventType = {range: GoogleAppsScript.Spreadsheet.Range; value: unknown};
+
+function onEdit(changeData: OnEditEventType) {
+    changeData.range.setBackground(bgColorChanged);
+    SpreadsheetApp.getActiveSheet()
+        .getRange(`${rowActionColumnName}${dataRowBegin}:${rowActionColumnName}`)
+        .setBackground(bgColorDefault);
     mainTable.updateRowsId();
 }
