@@ -12,7 +12,7 @@
 
 // main constants
 const requestsTableId = '1E5BIjJ6cpFsSl9fVcBvt9x8Bk7-uhqrz64jFbmqg5GI';
-const requestsSheetName = 'Requests';
+const requestsSheetName = 'Общая статистика';
 
 const managerTable1Id = '11ZNH5S8DuZUobQU6sw-_Svx5vVt62I9CmxSSF_eGFDM';
 const managerTableIdList: Array<string> = [managerTable1Id];
