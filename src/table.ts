@@ -443,7 +443,9 @@ const requestsTable = {
                     }
 
                     if (isInRequestsColumnRange || isInCommonColumnRange) {
-                        managerSheet.getRange(managerRowNumber, currentColumnNumber).setValue(requestsRowData);
+                        managerSheet.getRange(managerRowNumber, currentColumnNumber)
+                            .setValue(requestsRowData)
+                            .setBackground(bgColorSynced);
                         SpreadsheetApp.getActiveSheet()
                             .getRange(requestsRangeRowNumber, currentColumnNumber)
                             .setBackground(bgColorSynced);
