@@ -8,14 +8,14 @@
  sonarjs/no-duplicate-string
 */
 
-/* global Logger, SpreadsheetApp, GoogleAppsScript */
+/* global Logger, SpreadsheetApp, GoogleAppsScript, UrlFetchApp */
 
 // main constants
-const requestsTableId = '1E5BIjJ6cpFsSl9fVcBvt9x8Bk7-uhqrz64jFbmqg5GI';
+const requestsTableId = '1qmpdaS_EWJJd-C8ntLhhQ-AqrCVuI4ahBFnP0gx9ZT8';
 const requestsSheetName = 'Общая статистика';
 const requestsRequiredColumnName = ['R', 'S', 'T', 'V'];
 
-const managerTable1Id = '11ZNH5S8DuZUobQU6sw-_Svx5vVt62I9CmxSSF_eGFDM';
+const managerTable1Id = '1mD4Fxu1r4_lVvZ4h5mZ1SorsKW1dsNBkkQoOZn0P1o0';
 const managerRequiredColumnName = ['B', 'C', 'D', 'H', 'I', 'M', 'N', 'O', 'Q'];
 const managerTableIdList: Array<string> = [managerTable1Id];
 const bgColorSynced = '#00D100';
@@ -35,6 +35,20 @@ type RowDataType = {
     rowNumber: number;
     sheet: GoogleAppsScript.Spreadsheet.Sheet | null;
     spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet | null;
+};
+
+type NotificationMessageType = {
+    columnName: string;
+    managersName: string;
+    newCellContent: string;
+    oldCellContent: string;
+    rowNumber: number;
+    sheetName: string;
+};
+
+type RowRangesType = {
+    end: number;
+    start: number;
 };
 
 // ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
@@ -72,6 +86,12 @@ const util = {
         const list: Array<string> = [...alphabet.toUpperCase()];
 
         return list[columnNumber - 1] || '!';
+    },
+    getSpreadSheetUrl(tableId: string): string {
+        return SpreadsheetApp.openById(tableId).getUrl();
+    },
+    getSpreadSheetName(tableId: string): string {
+        return SpreadsheetApp.openById(tableId).getName();
     },
     getIsManagerSpreadsheet(): boolean {
         const spreadsheetId = SpreadsheetApp.getActive().getId();
@@ -164,6 +184,42 @@ const util = {
         });
 
         return errorCellList;
+    },
+    sendNotificationOnUpdate(messageContent: NotificationMessageType, sheetUrl: string): void {
+        const {sheetName, managersName, rowNumber, columnName, oldCellContent, newCellContent} = messageContent;
+
+        const message = `${sheetName}: Внесены изменения: ${
+            managersName || 'Не указано'
+        }, ${rowNumber} строка, ${columnName}:  ${oldCellContent} - ${newCellContent}`;
+
+        UrlFetchApp.fetch(
+            'https://workspace1.rocket.chat/hooks/6388be8fc6750ea9174eb2ed/L9QLKoFg3t9kEaSweTiXQA2A8dikKcfbpauXN9PstZj6fMzo',
+            {
+                method: 'get',
+                payload: {
+                    text: message,
+                    title: 'SpreadSheet',
+                    title_link: sheetUrl,
+                    link_description: 'Ссылка на таблицу',
+                },
+            }
+        );
+    },
+    sendNotificationOnAdd(range: RowRangesType, sheetUrl: string): void {
+        const message = `Добавлена новая информация: строки ${range.start}-${range.end}`;
+
+        UrlFetchApp.fetch(
+            'https://workspace1.rocket.chat/hooks/6388be8fc6750ea9174eb2ed/L9QLKoFg3t9kEaSweTiXQA2A8dikKcfbpauXN9PstZj6fMzo',
+            {
+                method: 'get',
+                payload: {
+                    text: message,
+                    title: 'SpreadSheet',
+                    title_link: sheetUrl,
+                    link_description: 'Ссылка на таблицу',
+                },
+            }
+        );
     },
 };
 
@@ -315,10 +371,14 @@ const managerTable = {
 
         SpreadsheetApp.getActiveSpreadsheet().toast('Done: 2/3', 'Syncing...', -1);
 
+        const addedRows: Array<number> = [];
+
         // update rows
+
         managerTable
             .getAllDataRange()
             .getValues()
+            // eslint-disable-next-line complexity
             .forEach((managerRow: Array<unknown>, managerRowIndex: number) => {
                 if (!util.getIsUpdateOrAdd(managerRow)) {
                     return;
@@ -338,6 +398,10 @@ const managerTable = {
                     : requestsRowData.rowNumber;
                 const requestsRangeRowBgColor: string = hasToMakeNewLine ? bgColorDefault : bgColorSynced;
 
+                if (hasToMakeNewLine) {
+                    addedRows.push(managerRowIndex);
+                }
+
                 // eslint-disable-next-line complexity
                 managerRow.forEach((managerRowData: unknown, managerColumnIndex: number) => {
                     const currentColumnNumber = managerColumnIndex + 1;
@@ -347,25 +411,53 @@ const managerTable = {
                     const isRowIdColumn = managerColumnIndex === rowIdColumnIndex;
                     const isNonUpdatableColumn = nonUpdatableColumnNumberList.includes(currentColumnNumber);
 
-                    if (isNonUpdatableColumn) {
-                        return;
-                    }
-
-                    if (util.getIsSyncedCell(managerRowNumber, currentColumnNumber)) {
+                    if (isNonUpdatableColumn || util.getIsSyncedCell(managerRowNumber, currentColumnNumber)) {
                         return;
                     }
 
                     if (isInManagerColumnRange || isInCommonColumnRange || isRowIdColumn) {
-                        requestsSheet
-                            .getRange(requestsRangeRowNumber, currentColumnNumber)
-                            .setValue(managerRowData)
-                            .setBackground(requestsRangeRowBgColor);
+                        const oldCellValue = requestsSheet.getRange(requestsRangeRowNumber, currentColumnNumber);
+
+                        if (!hasToMakeNewLine && managerRowData) {
+                            const managerNameColumn = 2;
+                            const sheetUrl = util.getSpreadSheetUrl(requestsTableId);
+                            const managerName: string = requestsSheet
+                                .getRange(requestsRangeRowNumber, managerNameColumn)
+                                .getValue();
+                            const columnTitle: string = requestsSheet
+                                .getRange(managerNameColumn, currentColumnNumber)
+                                .getValue();
+
+                            util.sendNotificationOnUpdate(
+                                {
+                                    sheetName: util.getSpreadSheetName(requestsTableId),
+                                    managersName: managerName,
+                                    rowNumber: requestsRangeRowNumber,
+                                    oldCellContent: oldCellValue.getValue() || "'Пустое поле'",
+                                    newCellContent: util.stringify(managerRowData),
+                                    columnName: columnTitle,
+                                },
+                                sheetUrl
+                            );
+                        }
+
+                        oldCellValue.setValue(managerRowData).setBackground(requestsRangeRowBgColor);
                         SpreadsheetApp.getActiveSheet()
                             .getRange(managerRowNumber, currentColumnNumber)
                             .setBackground(bgColorSynced);
                     }
                 });
             });
+
+        if (addedRows.length > 0) {
+            util.sendNotificationOnAdd(
+                {
+                    start: addedRows[0],
+                    end: addedRows[addedRows.length - 1],
+                },
+                util.getSpreadSheetUrl(requestsTableId)
+            );
+        }
 
         SpreadsheetApp.getActiveSpreadsheet().toast('Done: 3/3', 'Synced!', 2);
     },
@@ -471,7 +563,11 @@ const requestsTable = {
                 }
 
                 const managerRowData = mainTable.getRowDataById(requestsRowId, managerTableIdList);
-                const {sheet: managerSheet, rowNumber: managerRowNumber} = managerRowData;
+                const {
+                    sheet: managerSheet,
+                    rowNumber: managerRowNumber,
+                    spreadsheet: managerSpreadSheet,
+                } = managerRowData;
 
                 if (!managerSheet) {
                     appUI.alert(`Can not find row with id ${requestsRowId}`);
@@ -480,6 +576,7 @@ const requestsTable = {
 
                 const requestsRangeRowNumber: number = requestsRowIndex + dataRowBegin;
 
+                // eslint-disable-next-line complexity
                 requestsRow.forEach((requestsRowData: unknown, requestColumnIndex: number) => {
                     const currentColumnNumber = requestColumnIndex + 1;
                     const isInRequestsColumnRange = requestsColumnNumberList.includes(currentColumnNumber);
@@ -495,10 +592,30 @@ const requestsTable = {
                     }
 
                     if (isInRequestsColumnRange || isInCommonColumnRange) {
-                        managerSheet
-                            .getRange(managerRowNumber, currentColumnNumber)
-                            .setValue(requestsRowData)
-                            .setBackground(bgColorSynced);
+                        const managerNameColumn = 2;
+                        const oldCellValue = managerSheet.getRange(requestsRangeRowNumber, currentColumnNumber);
+                        const managerSpreadSheetId = util.stringify(managerSpreadSheet?.getId());
+                        const sheetUrl = util.getSpreadSheetUrl(managerSpreadSheetId);
+                        const managerName: string = managerSheet
+                            .getRange(requestsRangeRowNumber, managerNameColumn)
+                            .getValue();
+                        const columnTitle: string = managerSheet
+                            .getRange(managerNameColumn, currentColumnNumber)
+                            .getValue();
+
+                        util.sendNotificationOnUpdate(
+                            {
+                                sheetName: util.getSpreadSheetName(managerSpreadSheetId),
+                                managersName: managerName,
+                                rowNumber: requestsRangeRowNumber,
+                                oldCellContent: oldCellValue.getValue() || "'Пустое поле'",
+                                newCellContent: util.stringify(requestsRowData),
+                                columnName: columnTitle,
+                            },
+                            sheetUrl
+                        );
+
+                        oldCellValue.setValue(requestsRowData).setBackground(bgColorSynced);
                         SpreadsheetApp.getActiveSheet()
                             .getRange(requestsRangeRowNumber, currentColumnNumber)
                             .setBackground(bgColorSynced);

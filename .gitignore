@@ -13,3 +13,4 @@ npm-debug.log*
 /tsc-check/
 /coverage/
 /coverage-ts/
+.env
