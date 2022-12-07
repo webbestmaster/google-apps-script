@@ -13,8 +13,10 @@
 // main constants
 const requestsTableId = '1E5BIjJ6cpFsSl9fVcBvt9x8Bk7-uhqrz64jFbmqg5GI';
 const requestsSheetName = 'Общая статистика';
+const requestsRequiredColumnName = ['R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y'];
 
 const managerTable1Id = '11ZNH5S8DuZUobQU6sw-_Svx5vVt62I9CmxSSF_eGFDM';
+const managerRequiredColumnName = ['A', 'B', 'C', 'E', 'G', 'H', 'I', 'L', 'N', 'O', 'P', 'Q'];
 const managerTableIdList: Array<string> = [managerTable1Id];
 const bgColorSynced = '#00D100';
 const bgColorChanged = '#ECF87F';
@@ -64,6 +66,12 @@ const util = {
         return [...columnString].reverse().reduce<number>((sum: number, char: string, index: number) => {
             return sum + (list.indexOf(char) + 1) * Math.pow(alphabetLength, index);
         }, 0);
+    },
+    columnNumberToString(columnNumber: number): string {
+        const alphabet = 'abcdefghijklmnopqrstuvwxyz';
+        const list: Array<string> = [...alphabet.toUpperCase()];
+
+        return list[columnNumber - 1] || '!';
     },
     getIsManagerSpreadsheet(): boolean {
         const spreadsheetId = SpreadsheetApp.getActive().getId();
@@ -126,6 +134,36 @@ const util = {
         const cellBackgroundColor = cell.getBackground();
 
         return cellBackgroundColor.toLowerCase() === bgColorSynced.toLowerCase();
+    },
+    // return invalid rows/cells
+    getInvalidRequiredCellList(requiredColumnList: Array<string>): Array<string> {
+        const sheet: GoogleAppsScript.Spreadsheet.Sheet = SpreadsheetApp.getActiveSheet();
+        const range: GoogleAppsScript.Spreadsheet.Range = sheet.getRange(allDataRange);
+        const errorCellList: Array<string> = [];
+        const requiredColumnNumberList: Array<number> = requiredColumnList.map<number>(util.columnStringToNumber);
+
+        range.getValues().forEach((row: Array<unknown>, rowIndex: number) => {
+            // check for this row should be updated
+            if (!util.getIsUpdateOrAdd(row) && !util.getIsUpdate(row)) {
+                return;
+            }
+
+            const rowNumber: number = rowIndex + dataRowBegin;
+
+            row.forEach((cellValue: unknown, columnIndex: number) => {
+                const columnNumber = columnIndex + 1;
+
+                if (!requiredColumnNumberList.includes(columnNumber)) {
+                    return;
+                }
+
+                if (util.stringify(cellValue) === '') {
+                    errorCellList.push(`${util.columnNumberToString(columnNumber)}${rowNumber}`);
+                }
+            });
+        });
+
+        return errorCellList;
     },
 };
 
@@ -224,6 +262,13 @@ const managerTable = {
 
     // eslint-disable-next-line sonarjs/cognitive-complexity
     pushDataToRequestTable() {
+        const invalidRequiredCellList = util.getInvalidRequiredCellList(managerRequiredColumnName);
+
+        if (invalidRequiredCellList.length > 0) {
+            appUI.alert(`You should set follow cells: ${invalidRequiredCellList.join(', ')}.`);
+            return;
+        }
+
         SpreadsheetApp.getActiveSpreadsheet().toast('Done: 0/3', 'Syncing...', -1);
 
         // remove rows in requests table
@@ -357,6 +402,13 @@ const requestsTable = {
 
     // eslint-disable-next-line sonarjs/cognitive-complexity
     pushDataToManagerTable() {
+        const invalidRequiredCellList = util.getInvalidRequiredCellList(requestsRequiredColumnName);
+
+        if (invalidRequiredCellList.length > 0) {
+            appUI.alert(`You should set follow cells: ${invalidRequiredCellList.join(', ')}.`);
+            return;
+        }
+
         SpreadsheetApp.getActiveSpreadsheet().toast('Done: 0/3', 'Syncing...', -1);
 
         // remove rows in manager table
