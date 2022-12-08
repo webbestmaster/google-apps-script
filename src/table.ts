@@ -8,6 +8,8 @@
  sonarjs/no-duplicate-string
 */
 
+/* eslint camelcase: [2, {"properties": "always", "allow": ["title_link", "link_description"]}] */
+
 /* global Logger, SpreadsheetApp, GoogleAppsScript, UrlFetchApp */
 
 // main constants
