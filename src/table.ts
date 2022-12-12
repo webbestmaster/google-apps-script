@@ -23,6 +23,7 @@ const managerTableIdList: Array<string> = [managerTable1Id];
 const bgColorSynced = '#00D100';
 const bgColorChanged = '#ECF87F';
 const bgColorDefault = '#FFFFFF';
+const moscowGmt = 'GMT+3';
 
 const enum RowActionNameEnum {
     remove = 'remove',
@@ -191,6 +192,20 @@ const util = {
 
         return errorCellList;
     },
+    sendNotification(notification: {message: string; sheetUrl: string}): void {
+        UrlFetchApp.fetch(
+            'https://sigirgroup.rocket.chat/hooks/638df9b735f3f95d670d1333/FF4aWkxpQxu6ZeDnu7sWyGqcatrsu9uc2S7raZC6ttXfzuRv',
+            {
+                method: 'get',
+                payload: {
+                    text: notification.message,
+                    title: 'SpreadSheet',
+                    title_link: notification.sheetUrl,
+                    link_description: 'Ссылка на таблицу',
+                },
+            }
+        );
+    },
     sendNotificationOnUpdate(updates: Array<NotificationMessageType>, sheetUrl: string): void {
         const message = updates
             .map(
@@ -208,55 +223,21 @@ const util = {
             )
             .join('\n');
 
-        UrlFetchApp.fetch(
-            'https://sigirgroup.rocket.chat/hooks/638df9b735f3f95d670d1333/FF4aWkxpQxu6ZeDnu7sWyGqcatrsu9uc2S7raZC6ttXfzuRv',
-            {
-                method: 'get',
-                payload: {
-                    text: message,
-                    title: 'SpreadSheet',
-                    title_link: sheetUrl,
-                    link_description: 'Ссылка на таблицу',
-                },
-            }
-        );
+        util.sendNotification({message, sheetUrl});
     },
     sendNotificationOnAdd(range: RowRangesType, sheetUrl: string): void {
         const message = `Добавлена новая информация: строки ${range.start}-${range.end}`;
 
-        UrlFetchApp.fetch(
-            'https://sigirgroup.rocket.chat/hooks/638df9b735f3f95d670d1333/FF4aWkxpQxu6ZeDnu7sWyGqcatrsu9uc2S7raZC6ttXfzuRv',
-            {
-                method: 'get',
-                payload: {
-                    text: message,
-                    title: 'SpreadSheet',
-                    title_link: sheetUrl,
-                    link_description: 'Ссылка на таблицу',
-                },
-            }
-        );
+        util.sendNotification({message, sheetUrl});
     },
     sendNotificationOndDelete(
-        sheetName: string,
+        sheetInfo: {sheetName: string; sheetUrl: string},
         deletedCells: Array<string>,
-        rowNumber: number,
-        sheetUrl: string
+        rowNumber: number
     ): void {
-        const message = `${sheetName}: **УДАЛЕНО**: ${rowNumber} строка: ${deletedCells.join('; ')}`;
+        const message = `${sheetInfo.sheetName}: **УДАЛЕНО**: ${rowNumber} строка: ${deletedCells.join('; ')}`;
 
-        UrlFetchApp.fetch(
-            'https://sigirgroup.rocket.chat/hooks/638df9b735f3f95d670d1333/FF4aWkxpQxu6ZeDnu7sWyGqcatrsu9uc2S7raZC6ttXfzuRv',
-            {
-                method: 'get',
-                payload: {
-                    text: message,
-                    title: 'SpreadSheet',
-                    title_link: sheetUrl,
-                    link_description: 'Ссылка на таблицу',
-                },
-            }
-        );
+        util.sendNotification({message, sheetUrl: sheetInfo.sheetUrl});
     },
 };
 
@@ -391,7 +372,7 @@ const managerTable = {
                     let cellValue: Date | string = cell?.getValue();
 
                     if (cellValue instanceof Date) {
-                        cellValue = Utilities.formatDate(cellValue, 'GMT+3', 'dd-MM-yyyy');
+                        cellValue = Utilities.formatDate(cellValue, moscowGmt, 'dd-MM-yyyy');
                     }
 
                     if (deletedColumns.includes(columnLetter)) {
@@ -400,10 +381,12 @@ const managerTable = {
                 });
 
                 util.sendNotificationOndDelete(
-                    util.getSpreadSheetName(requestsTableId),
+                    {
+                        sheetName: util.getSpreadSheetName(requestsTableId),
+                        sheetUrl: util.getSpreadSheetUrl(requestsTableId),
+                    },
                     deletedCells,
-                    rowNumber,
-                    util.getSpreadSheetUrl(requestsTableId)
+                    rowNumber
                 );
 
                 sheet?.deleteRow(rowNumber);
@@ -494,11 +477,11 @@ const managerTable = {
                         let newValue = util.stringify(managerRowData);
 
                         if (oldValue instanceof Date) {
-                            oldValue = Utilities.formatDate(oldValue, 'GMT+3', 'dd-MM-yyyy');
+                            oldValue = Utilities.formatDate(oldValue, moscowGmt, 'dd-MM-yyyy');
                         }
 
                         if (managerRowData instanceof Date) {
-                            newValue = Utilities.formatDate(managerRowData, 'GMT+3', 'dd-MM-yyyy');
+                            newValue = Utilities.formatDate(managerRowData, moscowGmt, 'dd-MM-yyyy');
                         }
 
                         if (!hasToMakeNewLine && managerRowData) {
@@ -626,6 +609,7 @@ const requestsTable = {
         const updatedRows: Array<NotificationMessageType> = [];
         let spreadSheetId = '';
         // update rows
+
         requestsTable
             .getAllDataRange()
             .getValues()
@@ -656,6 +640,7 @@ const requestsTable = {
 
                 const managerNameColumn = 2;
                 const managerSpreadSheetId = util.stringify(managerSpreadSheet?.getId());
+
                 spreadSheetId = managerSpreadSheetId;
 
                 const updatedRow: NotificationMessageType = {
