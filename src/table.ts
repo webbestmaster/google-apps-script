@@ -243,7 +243,7 @@ const util = {
         rowNumber: number,
         sheetUrl: string
     ): void {
-        const message = `${sheetName}: УДАЛЕНО: ${rowNumber} строка: ${deletedCells.join('; ')}`;
+        const message = `${sheetName}: **УДАЛЕНО**: ${rowNumber} строка: ${deletedCells.join('; ')}`;
 
         UrlFetchApp.fetch(
             'https://sigirgroup.rocket.chat/hooks/638df9b735f3f95d670d1333/FF4aWkxpQxu6ZeDnu7sWyGqcatrsu9uc2S7raZC6ttXfzuRv',
