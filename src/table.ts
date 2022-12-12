@@ -10,7 +10,7 @@
 
 /* eslint camelcase: [2, {"properties": "always", "allow": ["title_link", "link_description"]}] */
 
-/* global Logger, SpreadsheetApp, GoogleAppsScript, UrlFetchApp */
+/* global Logger, SpreadsheetApp, GoogleAppsScript, UrlFetchApp, Utilities */
 
 // main constants
 const requestsTableId = '1qmpdaS_EWJJd-C8ntLhhQ-AqrCVuI4ahBFnP0gx9ZT8';
@@ -40,10 +40,10 @@ type RowDataType = {
 };
 
 type NotificationMessageType = {
-    sheetName: string;
     managerName: string;
     rowNumber: number;
-    updatedCells: UpdatedCellType[];
+    sheetName: string;
+    updatedCells: Array<UpdatedCellType>;
 };
 
 type UpdatedCellType = {
@@ -191,7 +191,7 @@ const util = {
 
         return errorCellList;
     },
-    sendNotificationOnUpdate(updates: NotificationMessageType[], sheetUrl: string): void {
+    sendNotificationOnUpdate(updates: Array<NotificationMessageType>, sheetUrl: string): void {
         const message = updates
             .map(
                 ({sheetName, managerName, rowNumber, updatedCells}, index: number) =>
@@ -223,6 +223,27 @@ const util = {
     },
     sendNotificationOnAdd(range: RowRangesType, sheetUrl: string): void {
         const message = `Добавлена новая информация: строки ${range.start}-${range.end}`;
+
+        UrlFetchApp.fetch(
+            'https://sigirgroup.rocket.chat/hooks/638df9b735f3f95d670d1333/FF4aWkxpQxu6ZeDnu7sWyGqcatrsu9uc2S7raZC6ttXfzuRv',
+            {
+                method: 'get',
+                payload: {
+                    text: message,
+                    title: 'SpreadSheet',
+                    title_link: sheetUrl,
+                    link_description: 'Ссылка на таблицу',
+                },
+            }
+        );
+    },
+    sendNotificationOndDelete(
+        sheetName: string,
+        deletedCells: Array<string>,
+        rowNumber: number,
+        sheetUrl: string
+    ): void {
+        const message = `${sheetName}: УДАЛЕНО: ${rowNumber} строка: ${deletedCells.join('; ')}`;
 
         UrlFetchApp.fetch(
             'https://sigirgroup.rocket.chat/hooks/638df9b735f3f95d670d1333/FF4aWkxpQxu6ZeDnu7sWyGqcatrsu9uc2S7raZC6ttXfzuRv',
@@ -358,9 +379,34 @@ const managerTable = {
                     return;
                 }
 
-                const requestsRowData = mainTable.getRowDataById(managerRowId, [requestsTableId]);
+                const {sheet, rowNumber} = mainTable.getRowDataById(managerRowId, [requestsTableId]);
+                const deletedCells: Array<string> = [];
 
-                requestsRowData.sheet?.deleteRow(requestsRowData.rowNumber);
+                managerRow.forEach((managerRowData: unknown, managerColumnIndex: number) => {
+                    const currentColumnNumber = managerColumnIndex + 1;
+                    const cell = sheet?.getRange(rowNumber, currentColumnNumber);
+
+                    const columnLetter = util.columnNumberToString(currentColumnNumber);
+                    const deletedColumns = ['D', 'M', 'N', 'S', 'V'];
+                    let cellValue: Date | string = cell?.getValue();
+
+                    if (cellValue instanceof Date) {
+                        cellValue = Utilities.formatDate(cellValue, 'GMT+3', 'dd-MM-yyyy');
+                    }
+
+                    if (deletedColumns.includes(columnLetter)) {
+                        deletedCells.push(cellValue || 'Не указано');
+                    }
+                });
+
+                util.sendNotificationOndDelete(
+                    util.getSpreadSheetName(requestsTableId),
+                    deletedCells,
+                    rowNumber,
+                    util.getSpreadSheetUrl(requestsTableId)
+                );
+
+                sheet?.deleteRow(rowNumber);
             });
 
         SpreadsheetApp.getActiveSpreadsheet().toast('Done: 1/3', 'Syncing...', -1);
@@ -444,7 +490,7 @@ const managerTable = {
                     if (isInManagerColumnRange || isInCommonColumnRange || isRowIdColumn) {
                         const oldCellValue = requestsSheet.getRange(requestsRangeRowNumber, currentColumnNumber);
 
-                        let oldValue = oldCellValue.getValue();
+                        let oldValue: Date | string = oldCellValue.getValue();
                         let newValue = util.stringify(managerRowData);
 
                         if (oldValue instanceof Date) {
@@ -578,7 +624,7 @@ const requestsTable = {
         SpreadsheetApp.getActiveSpreadsheet().toast('Done: 2/3', 'Syncing...', -1);
 
         const updatedRows: Array<NotificationMessageType> = [];
-        let spreadSheetId: string = '';
+        let spreadSheetId = '';
         // update rows
         requestsTable
             .getAllDataRange()
