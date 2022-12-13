@@ -192,7 +192,7 @@ const util = {
 
         return errorCellList;
     },
-    sendNotification(notification: {message: string; sheetUrl: string}): void {
+    sendNotification(notification: Record<'message' | 'sheetUrl', string>): void {
         UrlFetchApp.fetch(
             'https://sigirgroup.rocket.chat/hooks/638df9b735f3f95d670d1333/FF4aWkxpQxu6ZeDnu7sWyGqcatrsu9uc2S7raZC6ttXfzuRv',
             {
