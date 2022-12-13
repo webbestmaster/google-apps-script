@@ -59,9 +59,9 @@ type RowRangesType = {
 };
 
 // ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
-const managerColumnList: Array<string> = ['A', 'B', 'C', 'E', 'G', 'H', 'I', 'L', 'N', 'O', 'P', 'Q'];
+const managerColumnList: Array<string> = ['A', 'B', 'C', 'D', 'E', 'G', 'H', 'I', 'L', 'M', 'N', 'O', 'P', 'Q'];
 const requestsColumnList: Array<string> = ['R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y'];
-const commonColumnList: Array<string> = ['D', 'F', 'J', 'K', 'M'];
+const commonColumnList: Array<string> = ['F', 'J', 'K']; //
 const rowIdColumnName = 'BF';
 const rowActionColumnName = 'A';
 const nonUpdatableColumnNameList: Array<string> = [rowActionColumnName];
@@ -231,7 +231,7 @@ const util = {
         util.sendNotification({message, sheetUrl});
     },
     sendNotificationOndDelete(
-        sheetInfo: {sheetName: string; sheetUrl: string},
+        sheetInfo: { sheetName: string; sheetUrl: string },
         deletedCells: Array<string>,
         rowNumber: number
     ): void {
@@ -706,7 +706,7 @@ function onOpen() {
     mainTable.updateRowsId();
 }
 
-type OnEditEventType = {range: GoogleAppsScript.Spreadsheet.Range; value: unknown};
+type OnEditEventType = { range: GoogleAppsScript.Spreadsheet.Range; value: unknown };
 
 function onEdit(changeData: OnEditEventType) {
     changeData.range.setBackground(bgColorChanged);
