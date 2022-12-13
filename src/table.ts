@@ -231,7 +231,7 @@ const util = {
         util.sendNotification({message, sheetUrl});
     },
     sendNotificationOndDelete(
-        sheetInfo: { sheetName: string; sheetUrl: string },
+        sheetInfo: {sheetName: string; sheetUrl: string},
         deletedCells: Array<string>,
         rowNumber: number
     ): void {
@@ -706,7 +706,7 @@ function onOpen() {
     mainTable.updateRowsId();
 }
 
-type OnEditEventType = { range: GoogleAppsScript.Spreadsheet.Range; value: unknown };
+type OnEditEventType = {range: GoogleAppsScript.Spreadsheet.Range; value: unknown};
 
 function onEdit(changeData: OnEditEventType) {
     changeData.range.setBackground(bgColorChanged);
