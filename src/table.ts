@@ -59,7 +59,7 @@ type RowRangesType = {
 };
 
 // ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
-const managerColumnList: Array<string> = ['A', 'B', 'C', 'D', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'O', 'P', 'Q'];
+const managerColumnList: Array<string> = ['A', 'B', 'C', 'D', 'E', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'O', 'P', 'Q'];
 const requestsColumnList: Array<string> = ['R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y'];
 const commonColumnList: Array<string> = ['F', 'J']; //
 const rowIdColumnName = 'BF';
