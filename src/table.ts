@@ -194,7 +194,7 @@ const util = {
     },
     sendNotification(notification: Record<'message' | 'sheetUrl', string>): void {
         UrlFetchApp.fetch(
-            'https://sigirgroup.rocket.chat/hooks/638df9b735f3f95d670d1333/FF4aWkxpQxu6ZeDnu7sWyGqcatrsu9uc2S7raZC6ttXfzuRv',
+            'https://chat.sigirgroup.com/hooks/63a42d41681796c1e50bd542/xxy6a8PxCCEEwom7HPcoQuJhHp953CQkDvQaMBeZideT7sJF',
             {
                 method: 'get',
                 payload: {
