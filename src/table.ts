@@ -4,16 +4,16 @@
 
 // main constants
 const requestsTableId = '1qmpdaS_EWJJd-C8ntLhhQ-AqrCVuI4ahBFnP0gx9ZT8';
-const requestsColumnList: Array<string> = ['R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y'];
-const requestsRequiredColumnName: Array<string> = ['R', 'S', 'T', 'V'];
+const requestsColumnList: Array<string> = ['G', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'AA', 'AB'];
+const requestsRequiredColumnName: Array<string> = ['K', 'T', 'U', 'V', 'W', 'X'];
 const requestsSheetName = 'Общая статистика';
 
 const managerTable1Id = '1mD4Fxu1r4_lVvZ4h5mZ1SorsKW1dsNBkkQoOZn0P1o0';
-const managerColumnList: Array<string> = ['A', 'B', 'C', 'D', 'E', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'O', 'P', 'Q'];
-const managerRequiredColumnName: Array<string> = ['B', 'C', 'D', 'H', 'I', 'M', 'N', 'O', 'Q'];
+const managerColumnList: Array<string> = ['A', 'B', 'C', 'D', 'E', 'H', 'I', 'J', 'L', 'N', 'P', 'Q', 'R', 'S'];
+const managerRequiredColumnName: Array<string> = ['B', 'C', 'D', 'I', 'J', 'O', 'P', 'Q', 'S'];
 const managerTableIdList: Array<string> = [managerTable1Id];
 
-const commonColumnList: Array<string> = ['F', 'J']; //
+const commonColumnList: Array<string> = ['F', 'K', 'O']; //
 const rowIdColumnName = 'BF';
 const rowActionColumnName = 'A';
 const nonUpdatableColumnNameList: Array<string> = [rowActionColumnName];
