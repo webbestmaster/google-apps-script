@@ -74,7 +74,8 @@ const util = {
         const list: Array<string> = [...alphabet.toUpperCase()];
 
         if (columnNumber > 26) {
-            return 'A' + util.columnNumberToString(columnNumber - 26);
+            appUI.alert('[columnNumberToString] value is too big');
+            return '!';
         }
 
         return list[columnNumber - 1];
@@ -429,7 +430,11 @@ const requestsTable = {
                 }
 
                 const managerRowData = mainTable.getRowDataById(requestsRowId, managerTableIdList);
-                const {sheet: managerSheet, spreadsheet: managerSpreadSheet} = managerRowData;
+                const {
+                    sheet: managerSheet,
+                    spreadsheet: managerSpreadSheet,
+                    rowNumber: managerRowNumber,
+                } = managerRowData;
 
                 if (!managerSheet) {
                     appUI.alert(`Can not find row with id ${requestsRowId}`);
@@ -466,7 +471,7 @@ const requestsTable = {
                     }
 
                     if (isInRequestsColumnRange || isInCommonColumnRange) {
-                        const oldCellValue = managerSheet.getRange(requestsRangeRowNumber, currentColumnNumber);
+                        const oldCellValue = managerSheet.getRange(managerRowNumber, currentColumnNumber);
 
                         updatedRow.updatedCells.push({
                             columnName: managerSheet.getRange(managerNameColumn, currentColumnNumber).getValue(),
