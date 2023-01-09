@@ -1,17 +1,35 @@
 /* global Logger, SpreadsheetApp, GoogleAppsScript, UrlFetchApp, Utilities */
 
+// ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
+
 // main constants
 const requestsTableId = '1qmpdaS_EWJJd-C8ntLhhQ-AqrCVuI4ahBFnP0gx9ZT8';
+const requestsColumnList: Array<string> = ['R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y'];
+const requestsRequiredColumnName: Array<string> = ['R', 'S', 'T', 'V'];
 const requestsSheetName = 'Общая статистика';
-const requestsRequiredColumnName = ['R', 'S', 'T', 'V'];
 
 const managerTable1Id = '1mD4Fxu1r4_lVvZ4h5mZ1SorsKW1dsNBkkQoOZn0P1o0';
-const managerRequiredColumnName = ['B', 'C', 'D', 'H', 'I', 'M', 'N', 'O', 'Q'];
+const managerColumnList: Array<string> = ['A', 'B', 'C', 'D', 'E', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'O', 'P', 'Q'];
+const managerRequiredColumnName: Array<string> = ['B', 'C', 'D', 'H', 'I', 'M', 'N', 'O', 'Q'];
 const managerTableIdList: Array<string> = [managerTable1Id];
+
+const commonColumnList: Array<string> = ['F', 'J']; //
+const rowIdColumnName = 'BF';
+const rowActionColumnName = 'A';
+const nonUpdatableColumnNameList: Array<string> = [rowActionColumnName];
+
+// first row with data
+const dataRowBegin = 3;
+const firstColumnName = 'A';
+const lastColumnName = rowIdColumnName;
+
 const bgColorSynced = '#00D100';
 const bgColorChanged = '#ECF87F';
 const bgColorDefault = '#FFFFFF';
+
 const moscowGmt = 'GMT+3';
+
+const allDataRange = `${firstColumnName}${dataRowBegin}:${lastColumnName}`;
 
 const enum RowActionNameEnum {
     remove = 'remove',
@@ -45,21 +63,6 @@ type RowRangesType = {
     end: number;
     start: number;
 };
-
-// ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
-const managerColumnList: Array<string> = ['A', 'B', 'C', 'D', 'E', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'O', 'P', 'Q'];
-const requestsColumnList: Array<string> = ['R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y'];
-const commonColumnList: Array<string> = ['F', 'J']; //
-const rowIdColumnName = 'BF';
-const rowActionColumnName = 'A';
-const nonUpdatableColumnNameList: Array<string> = [rowActionColumnName];
-
-// first row with data
-const dataRowBegin = 3;
-const firstColumnName = 'A';
-const lastColumnName = rowIdColumnName;
-
-const allDataRange = `${firstColumnName}${dataRowBegin}:${lastColumnName}`;
 
 Logger.log(lastColumnName);
 
