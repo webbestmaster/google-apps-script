@@ -1,15 +1,3 @@
-/* eslint-disable
- @typescript-eslint/no-unused-vars,
- no-unused-vars,
- @typescript-eslint/no-use-before-define,
- sort-keys,
- unicorn/prefer-set-has,
- no-plusplus,
- sonarjs/no-duplicate-string
-*/
-
-/* eslint camelcase: [2, {"properties": "always", "allow": ["title_link", "link_description"]}] */
-
 /* global Logger, SpreadsheetApp, GoogleAppsScript, UrlFetchApp, Utilities */
 
 // main constants
@@ -40,17 +28,17 @@ type RowDataType = {
     spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet | null;
 };
 
+type UpdatedCellType = {
+    columnName: string;
+    newCellContent: string;
+    oldCellContent: string;
+};
+
 type NotificationMessageType = {
     managerName: string;
     rowNumber: number;
     sheetName: string;
     updatedCells: Array<UpdatedCellType>;
-};
-
-type UpdatedCellType = {
-    columnName: string;
-    newCellContent: string;
-    oldCellContent: string;
 };
 
 type RowRangesType = {
@@ -78,6 +66,12 @@ Logger.log(lastColumnName);
 const appUI: GoogleAppsScript.Base.Ui = SpreadsheetApp.getUi();
 
 const util = {
+    columnNumberToString(columnNumber: number): string {
+        const alphabet = 'abcdefghijklmnopqrstuvwxyz';
+        const list: Array<string> = [...alphabet.toUpperCase()];
+
+        return list[columnNumber - 1] || '!';
+    },
     columnStringToNumber(columnStringRaw: string): number {
         const alphabet = 'abcdefghijklmnopqrstuvwxyz';
         const alphabetLength: number = alphabet.length;
@@ -88,85 +82,11 @@ const util = {
             return sum + (list.indexOf(char) + 1) * Math.pow(alphabetLength, index);
         }, 0);
     },
-    columnNumberToString(columnNumber: number): string {
-        const alphabet = 'abcdefghijklmnopqrstuvwxyz';
-        const list: Array<string> = [...alphabet.toUpperCase()];
-
-        return list[columnNumber - 1] || '!';
-    },
-    getSpreadSheetUrl(tableId: string): string {
-        return SpreadsheetApp.openById(tableId).getUrl();
-    },
-    getSpreadSheetName(tableId: string): string {
-        return SpreadsheetApp.openById(tableId).getName();
-    },
-    getIsManagerSpreadsheet(): boolean {
-        const spreadsheetId = SpreadsheetApp.getActive().getId();
-
-        return managerTableIdList.includes(spreadsheetId);
-    },
-    getIsRequestsSpreadsheet(): boolean {
-        const spreadsheetId = SpreadsheetApp.getActive().getId();
-
-        return spreadsheetId === requestsTableId;
-    },
-    getRandomString(): string {
-        const fromRandom = Math.random().toString(32).replace('0.', '');
-        const fromTime = Date.now().toString(32);
-
-        return `${fromRandom}${fromTime}`.toLowerCase();
-    },
-    getIsSkipRow(row: Array<unknown>): boolean {
-        const cellRawValue = util.stringify(row[rowActionColumnIndex]).trim().toLowerCase();
-
-        return cellRawValue === RowActionNameEnum.skip;
-    },
-    getIsRemoveRow(row: Array<unknown>): boolean {
-        const cellRawValue = util.stringify(row[rowActionColumnIndex]).trim().toLowerCase();
-
-        return cellRawValue === RowActionNameEnum.remove;
-    },
-    getIsUpdateOrAdd(row: Array<unknown>): boolean {
-        const cellRawValue = util.stringify(row[rowActionColumnIndex]).trim().toLowerCase();
-
-        return cellRawValue === RowActionNameEnum.updateOrAdd;
-    },
-    getIsUpdate(row: Array<unknown>): boolean {
-        const cellRawValue = util.stringify(row[rowActionColumnIndex]).trim().toLowerCase();
-
-        return cellRawValue === RowActionNameEnum.update;
-    },
-    // eslint-disable-next-line max-statements, complexity
-    stringify(value: unknown): string {
-        if (typeof value === 'string') {
-            return value.trim();
-        }
-
-        if (typeof value === 'boolean') {
-            return value.toString().toLowerCase();
-        }
-
-        if (typeof value === 'number') {
-            return value.toString(10);
-        }
-
-        if (!value) {
-            return '';
-        }
-
-        return String(value);
-    },
-    getIsSyncedCell(rowNumber: number, columnNumber: number): boolean {
-        const cell = SpreadsheetApp.getActiveSheet().getRange(rowNumber, columnNumber);
-        const cellBackgroundColor = cell.getBackground();
-
-        return cellBackgroundColor.toLowerCase() === bgColorSynced.toLowerCase();
-    },
-    // return invalid rows/cells
     getInvalidRequiredCellList(requiredColumnList: Array<string>): Array<string> {
         const sheet: GoogleAppsScript.Spreadsheet.Sheet = SpreadsheetApp.getActiveSheet();
         const range: GoogleAppsScript.Spreadsheet.Range = sheet.getRange(allDataRange);
         const errorCellList: Array<string> = [];
+        // eslint-disable-next-line unicorn/prefer-set-has
         const requiredColumnNumberList: Array<number> = requiredColumnList.map<number>(util.columnStringToNumber);
 
         range.getValues().forEach((row: Array<unknown>, rowIndex: number) => {
@@ -192,19 +112,79 @@ const util = {
 
         return errorCellList;
     },
+    getIsManagerSpreadsheet(): boolean {
+        const spreadsheetId = SpreadsheetApp.getActive().getId();
+
+        return managerTableIdList.includes(spreadsheetId);
+    },
+    getIsRemoveRow(row: Array<unknown>): boolean {
+        const utilRowActionColumnIndex = util.columnStringToNumber(rowActionColumnName) - 1;
+        const cellRawValue = util.stringify(row[utilRowActionColumnIndex]).trim().toLowerCase();
+
+        return cellRawValue === RowActionNameEnum.remove;
+    },
+    getIsRequestsSpreadsheet(): boolean {
+        const spreadsheetId = SpreadsheetApp.getActive().getId();
+
+        return spreadsheetId === requestsTableId;
+    },
+    getIsSkipRow(row: Array<unknown>): boolean {
+        const utilRowActionColumnIndex = util.columnStringToNumber(rowActionColumnName) - 1;
+        const cellRawValue = util.stringify(row[utilRowActionColumnIndex]).trim().toLowerCase();
+
+        return cellRawValue === RowActionNameEnum.skip;
+    },
+    getIsSyncedCell(rowNumber: number, columnNumber: number): boolean {
+        const cell = SpreadsheetApp.getActiveSheet().getRange(rowNumber, columnNumber);
+        const cellBackgroundColor = cell.getBackground();
+
+        return cellBackgroundColor.toLowerCase() === bgColorSynced.toLowerCase();
+    },
+    getIsUpdate(row: Array<unknown>): boolean {
+        const utilRowActionColumnIndex = util.columnStringToNumber(rowActionColumnName) - 1;
+        const cellRawValue = util.stringify(row[utilRowActionColumnIndex]).trim().toLowerCase();
+
+        return cellRawValue === RowActionNameEnum.update;
+    },
+    getIsUpdateOrAdd(row: Array<unknown>): boolean {
+        const utilRowActionColumnIndex = util.columnStringToNumber(rowActionColumnName) - 1;
+        const cellRawValue = util.stringify(row[utilRowActionColumnIndex]).trim().toLowerCase();
+
+        return cellRawValue === RowActionNameEnum.updateOrAdd;
+    },
+    getRandomString(): string {
+        const fromRandom = Math.random().toString(32).replace('0.', '');
+        const fromTime = Date.now().toString(32);
+
+        return `${fromRandom}${fromTime}`.toLowerCase();
+    },
+    getSpreadSheetName(tableId: string): string {
+        return SpreadsheetApp.openById(tableId).getName();
+    },
+    getSpreadSheetUrl(tableId: string): string {
+        return SpreadsheetApp.openById(tableId).getUrl();
+    },
+    // return invalid rows/cells
     sendNotification(notification: Record<'message' | 'sheetUrl', string>): void {
         UrlFetchApp.fetch(
             'https://sigirgroup.rocket.chat/hooks/638df9b735f3f95d670d1333/FF4aWkxpQxu6ZeDnu7sWyGqcatrsu9uc2S7raZC6ttXfzuRv',
             {
                 method: 'get',
                 payload: {
+                    // eslint-disable-next-line id-match, camelcase
+                    link_description: 'Ссылка на таблицу',
                     text: notification.message,
                     title: 'SpreadSheet',
+                    // eslint-disable-next-line id-match, camelcase
                     title_link: notification.sheetUrl,
-                    link_description: 'Ссылка на таблицу',
                 },
             }
         );
+    },
+    sendNotificationOnAdd(range: RowRangesType, sheetUrl: string): void {
+        const message = `Добавлена новая информация: строки ${range.start}-${range.end}`;
+
+        util.sendNotification({message, sheetUrl});
     },
     sendNotificationOnUpdate(updates: Array<NotificationMessageType>, sheetUrl: string): void {
         const message = updates
@@ -225,11 +205,6 @@ const util = {
 
         util.sendNotification({message, sheetUrl});
     },
-    sendNotificationOnAdd(range: RowRangesType, sheetUrl: string): void {
-        const message = `Добавлена новая информация: строки ${range.start}-${range.end}`;
-
-        util.sendNotification({message, sheetUrl});
-    },
     sendNotificationOndDelete(
         sheetInfo: {sheetName: string; sheetUrl: string},
         deletedCells: Array<string>,
@@ -239,16 +214,77 @@ const util = {
 
         util.sendNotification({message, sheetUrl: sheetInfo.sheetUrl});
     },
+    stringify(value: unknown): string {
+        if (typeof value === 'string') {
+            return value.trim();
+        }
+
+        if (typeof value === 'boolean') {
+            return value.toString().toLowerCase();
+        }
+
+        if (typeof value === 'number') {
+            return value.toString(10);
+        }
+
+        if (!value) {
+            return '';
+        }
+
+        return String(value);
+    },
 };
 
 const rowIdColumnIndex = util.columnStringToNumber(rowIdColumnName) - 1;
 const rowActionColumnIndex = util.columnStringToNumber(rowActionColumnName) - 1;
+// eslint-disable-next-line unicorn/prefer-set-has
 const managerColumnNumberList: Array<number> = managerColumnList.map<number>(util.columnStringToNumber);
+// eslint-disable-next-line unicorn/prefer-set-has
 const requestsColumnNumberList: Array<number> = requestsColumnList.map<number>(util.columnStringToNumber);
+// eslint-disable-next-line unicorn/prefer-set-has
 const commonColumnNumberList: Array<number> = commonColumnList.map<number>(util.columnStringToNumber);
+// eslint-disable-next-line unicorn/prefer-set-has
 const nonUpdatableColumnNumberList: Array<number> = nonUpdatableColumnNameList.map<number>(util.columnStringToNumber);
 
 const mainTable = {
+    getRowDataById(searchingRowId: string, tableIdList: Array<string>): RowDataType {
+        let rowData: RowDataType = {
+            rowDataList: [],
+            rowId: '',
+            rowNumber: 0,
+            sheet: null,
+            spreadsheet: null,
+        };
+
+        tableIdList.some((spreadsheetId: string): boolean => {
+            const spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+            const sheetList: Array<GoogleAppsScript.Spreadsheet.Sheet> = spreadsheet.getSheets();
+
+            return sheetList.some((sheet: GoogleAppsScript.Spreadsheet.Sheet): boolean => {
+                const range: GoogleAppsScript.Spreadsheet.Range = sheet.getRange(allDataRange);
+
+                return range.getValues().some((row: Array<unknown>, rowIndex: number): boolean => {
+                    const rowId = util.stringify(row[rowIdColumnIndex]);
+
+                    if (rowId !== searchingRowId) {
+                        return false;
+                    }
+
+                    rowData = {
+                        rowDataList: [...row],
+                        rowId,
+                        rowNumber: rowIndex + dataRowBegin,
+                        sheet,
+                        spreadsheet,
+                    };
+
+                    return true;
+                });
+            });
+        });
+
+        return rowData;
+    },
     updateRowsId() {
         const sheet: GoogleAppsScript.Spreadsheet.Sheet = SpreadsheetApp.getActiveSheet();
 
@@ -279,246 +315,6 @@ const mainTable = {
                 cellIdRange.setValue('');
             }
         });
-    },
-    getRowDataById(searchingRowId: string, tableIdList: Array<string>): RowDataType {
-        let rowData: RowDataType = {
-            rowId: '',
-            rowNumber: 0,
-            spreadsheet: null,
-            rowDataList: [],
-            sheet: null,
-        };
-
-        tableIdList.some((spreadsheetId: string): boolean => {
-            const spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet = SpreadsheetApp.openById(spreadsheetId);
-            const sheetList: Array<GoogleAppsScript.Spreadsheet.Sheet> = spreadsheet.getSheets();
-
-            return sheetList.some((sheet: GoogleAppsScript.Spreadsheet.Sheet): boolean => {
-                const range: GoogleAppsScript.Spreadsheet.Range = sheet.getRange(allDataRange);
-
-                return range.getValues().some((row: Array<unknown>, rowIndex: number): boolean => {
-                    const rowId = util.stringify(row[rowIdColumnIndex]);
-
-                    if (rowId !== searchingRowId) {
-                        return false;
-                    }
-
-                    rowData = {
-                        rowId,
-                        rowNumber: rowIndex + dataRowBegin,
-                        spreadsheet,
-                        rowDataList: [...row],
-                        sheet,
-                    };
-
-                    return true;
-                });
-            });
-        });
-
-        return rowData;
-    },
-};
-
-const managerTable = {
-    getAllDataRange(): GoogleAppsScript.Spreadsheet.Range {
-        const sheet: GoogleAppsScript.Spreadsheet.Sheet = SpreadsheetApp.getActiveSheet();
-
-        return sheet.getRange(allDataRange);
-    },
-
-    makeUiMenuForManager() {
-        const menu: GoogleAppsScript.Base.Menu = appUI.createMenu('Push data to requests table');
-
-        menu.addItem('Push to Requests Table', 'managerTable.pushDataToRequestTable');
-        menu.addToUi();
-    },
-
-    // eslint-disable-next-line sonarjs/cognitive-complexity
-    pushDataToRequestTable() {
-        const invalidRequiredCellList = util.getInvalidRequiredCellList(managerRequiredColumnName);
-
-        if (invalidRequiredCellList.length > 0) {
-            appUI.alert(`You should set follow cells: ${invalidRequiredCellList.join(', ')}.`);
-            return;
-        }
-
-        SpreadsheetApp.getActiveSpreadsheet().toast('Done: 0/3', 'Syncing...', -1);
-
-        // remove rows in requests table
-        managerTable
-            .getAllDataRange()
-            .getValues()
-            .forEach((managerRow: Array<unknown>) => {
-                if (!util.getIsRemoveRow(managerRow)) {
-                    return;
-                }
-
-                const managerRowId = util.stringify(managerRow[rowIdColumnIndex]);
-
-                if (!managerRowId) {
-                    return;
-                }
-
-                const {sheet, rowNumber} = mainTable.getRowDataById(managerRowId, [requestsTableId]);
-                const deletedCells: Array<string> = [];
-
-                managerRow.forEach((managerRowData: unknown, managerColumnIndex: number) => {
-                    const currentColumnNumber = managerColumnIndex + 1;
-                    const cell = sheet?.getRange(rowNumber, currentColumnNumber);
-
-                    const columnLetter = util.columnNumberToString(currentColumnNumber);
-                    const deletedColumns = ['D', 'M', 'N', 'S', 'V'];
-                    let cellValue: Date | string = cell?.getValue();
-
-                    if (cellValue instanceof Date) {
-                        cellValue = Utilities.formatDate(cellValue, moscowGmt, 'dd-MM-yyyy');
-                    }
-
-                    if (deletedColumns.includes(columnLetter)) {
-                        deletedCells.push(cellValue || 'Не указано');
-                    }
-                });
-
-                util.sendNotificationOndDelete(
-                    {
-                        sheetName: util.getSpreadSheetName(requestsTableId),
-                        sheetUrl: util.getSpreadSheetUrl(requestsTableId),
-                    },
-                    deletedCells,
-                    rowNumber
-                );
-
-                sheet?.deleteRow(rowNumber);
-            });
-
-        SpreadsheetApp.getActiveSpreadsheet().toast('Done: 1/3', 'Syncing...', -1);
-
-        // remove rows in manager table
-        managerTable
-            .getAllDataRange()
-            .getValues()
-            .forEach((managerRow: Array<unknown>) => {
-                if (!util.getIsRemoveRow(managerRow)) {
-                    return;
-                }
-
-                const managerRowId = util.stringify(managerRow[rowIdColumnIndex]);
-
-                if (!managerRowId) {
-                    return;
-                }
-
-                const managerRowData = mainTable.getRowDataById(managerRowId, [SpreadsheetApp.getActive().getId()]);
-
-                managerRowData.sheet?.deleteRow(managerRowData.rowNumber);
-            });
-
-        SpreadsheetApp.getActiveSpreadsheet().toast('Done: 2/3', 'Syncing...', -1);
-
-        const addedRows: Array<number> = [];
-        const updatedRows: Array<NotificationMessageType> = [];
-
-        // update rows
-
-        managerTable
-            .getAllDataRange()
-            .getValues()
-            // eslint-disable-next-line complexity
-            .forEach((managerRow: Array<unknown>, managerRowIndex: number) => {
-                if (!util.getIsUpdateOrAdd(managerRow)) {
-                    return;
-                }
-
-                const managerRowId = util.stringify(managerRow[rowIdColumnIndex]);
-
-                if (!managerRowId) {
-                    return;
-                }
-
-                const requestsSheet = requestsTable.getRequestsSheet();
-                const requestsRowData = mainTable.getRowDataById(managerRowId, [requestsTableId]);
-                const hasToMakeNewLine = !requestsRowData.sheet;
-                const requestsRangeRowNumber: number = hasToMakeNewLine
-                    ? requestsSheet.getLastRow() + 1
-                    : requestsRowData.rowNumber;
-                const requestsRangeRowBgColor: string = hasToMakeNewLine ? bgColorDefault : bgColorSynced;
-
-                const managerNameColumn = 2;
-
-                const updatedRow: NotificationMessageType = {
-                    sheetName: util.getSpreadSheetName(requestsTableId),
-                    managerName: requestsSheet.getRange(requestsRangeRowNumber, managerNameColumn).getValue(),
-                    rowNumber: requestsRangeRowNumber,
-                    updatedCells: [],
-                };
-
-                if (hasToMakeNewLine) {
-                    addedRows.push(requestsRangeRowNumber);
-                }
-
-                // eslint-disable-next-line complexity
-                managerRow.forEach((managerRowData: unknown, managerColumnIndex: number) => {
-                    const currentColumnNumber = managerColumnIndex + 1;
-                    const managerRowNumber = managerRowIndex + dataRowBegin;
-                    const isInManagerColumnRange = managerColumnNumberList.includes(currentColumnNumber);
-                    const isInCommonColumnRange = commonColumnNumberList.includes(currentColumnNumber);
-                    const isRowIdColumn = managerColumnIndex === rowIdColumnIndex;
-                    const isNonUpdatableColumn = nonUpdatableColumnNumberList.includes(currentColumnNumber);
-
-                    if (isNonUpdatableColumn || util.getIsSyncedCell(managerRowNumber, currentColumnNumber)) {
-                        return;
-                    }
-
-                    if (isInManagerColumnRange || isInCommonColumnRange || isRowIdColumn) {
-                        const oldCellValue = requestsSheet.getRange(requestsRangeRowNumber, currentColumnNumber);
-
-                        let oldValue: Date | string = oldCellValue.getValue();
-                        let newValue = util.stringify(managerRowData);
-
-                        if (oldValue instanceof Date) {
-                            oldValue = Utilities.formatDate(oldValue, moscowGmt, 'dd-MM-yyyy');
-                        }
-
-                        if (managerRowData instanceof Date) {
-                            newValue = Utilities.formatDate(managerRowData, moscowGmt, 'dd-MM-yyyy');
-                        }
-
-                        if (!hasToMakeNewLine && managerRowData) {
-                            updatedRow.updatedCells.push({
-                                columnName: requestsSheet.getRange(managerNameColumn, currentColumnNumber).getValue(),
-                                oldCellContent: oldValue,
-                                newCellContent: newValue,
-                            });
-                        }
-
-                        oldCellValue.setValue(managerRowData).setBackground(requestsRangeRowBgColor);
-                        SpreadsheetApp.getActiveSheet()
-                            .getRange(managerRowNumber, currentColumnNumber)
-                            .setBackground(bgColorSynced);
-                    }
-                });
-
-                if (updatedRow.updatedCells.length > 0) {
-                    updatedRows.push(updatedRow);
-                }
-            });
-
-        if (addedRows.length > 0) {
-            util.sendNotificationOnAdd(
-                {
-                    start: addedRows[0],
-                    end: addedRows[addedRows.length - 1],
-                },
-                util.getSpreadSheetUrl(requestsTableId)
-            );
-        }
-
-        if (updatedRows.length > 0) {
-            util.sendNotificationOnUpdate(updatedRows, util.getSpreadSheetUrl(requestsTableId));
-        }
-
-        SpreadsheetApp.getActiveSpreadsheet().toast('Done: 3/3', 'Synced!', 2);
     },
 };
 
@@ -553,6 +349,7 @@ const requestsTable = {
 
     // eslint-disable-next-line sonarjs/cognitive-complexity
     pushDataToManagerTable() {
+        const syncingText = 'Syncing...';
         const invalidRequiredCellList = util.getInvalidRequiredCellList(requestsRequiredColumnName);
 
         if (invalidRequiredCellList.length > 0) {
@@ -560,7 +357,7 @@ const requestsTable = {
             return;
         }
 
-        SpreadsheetApp.getActiveSpreadsheet().toast('Done: 0/3', 'Syncing...', -1);
+        SpreadsheetApp.getActiveSpreadsheet().toast('Done: 0/3', syncingText, -1);
 
         // remove rows in manager table
         requestsTable
@@ -582,7 +379,7 @@ const requestsTable = {
                 managerRowData.sheet?.deleteRow(managerRowData.rowNumber);
             });
 
-        SpreadsheetApp.getActiveSpreadsheet().toast('Done: 1/3', 'Syncing...', -1);
+        SpreadsheetApp.getActiveSpreadsheet().toast('Done: 1/3', syncingText, -1);
 
         // remove rows in requests table
         requestsTable
@@ -604,7 +401,7 @@ const requestsTable = {
                 requestsRowData.sheet?.deleteRow(requestsRowData.rowNumber);
             });
 
-        SpreadsheetApp.getActiveSpreadsheet().toast('Done: 2/3', 'Syncing...', -1);
+        SpreadsheetApp.getActiveSpreadsheet().toast('Done: 2/3', syncingText, -1);
 
         const updatedRows: Array<NotificationMessageType> = [];
         let spreadSheetId = '';
@@ -625,11 +422,7 @@ const requestsTable = {
                 }
 
                 const managerRowData = mainTable.getRowDataById(requestsRowId, managerTableIdList);
-                const {
-                    sheet: managerSheet,
-                    rowNumber: managerRowNumber,
-                    spreadsheet: managerSpreadSheet,
-                } = managerRowData;
+                const {sheet: managerSheet, spreadsheet: managerSpreadSheet} = managerRowData;
 
                 if (!managerSheet) {
                     appUI.alert(`Can not find row with id ${requestsRowId}`);
@@ -644,9 +437,9 @@ const requestsTable = {
                 spreadSheetId = managerSpreadSheetId;
 
                 const updatedRow: NotificationMessageType = {
-                    sheetName: util.getSpreadSheetName(managerSpreadSheetId),
                     managerName: managerSheet.getRange(requestsRangeRowNumber, managerNameColumn).getValue(),
                     rowNumber: requestsRangeRowNumber,
+                    sheetName: util.getSpreadSheetName(managerSpreadSheetId),
                     updatedCells: [],
                 };
 
@@ -669,9 +462,9 @@ const requestsTable = {
                         const oldCellValue = managerSheet.getRange(requestsRangeRowNumber, currentColumnNumber);
 
                         updatedRow.updatedCells.push({
-                            oldCellContent: oldCellValue.getValue() || "'Пустое поле'",
-                            newCellContent: util.stringify(requestsRowData),
                             columnName: managerSheet.getRange(managerNameColumn, currentColumnNumber).getValue(),
+                            newCellContent: util.stringify(requestsRowData),
+                            oldCellContent: oldCellValue.getValue() || '\'Пустое поле\'',
                         });
 
                         oldCellValue.setValue(requestsRowData).setBackground(bgColorSynced);
@@ -693,7 +486,213 @@ const requestsTable = {
     },
 };
 
+const managerTable = {
+    getAllDataRange(): GoogleAppsScript.Spreadsheet.Range {
+        const sheet: GoogleAppsScript.Spreadsheet.Sheet = SpreadsheetApp.getActiveSheet();
+
+        return sheet.getRange(allDataRange);
+    },
+
+    mainDateFormat: 'dd-MM-yyyy',
+
+    makeUiMenuForManager() {
+        const menu: GoogleAppsScript.Base.Menu = appUI.createMenu('Push data to requests table');
+
+        menu.addItem('Push to Requests Table', 'managerTable.pushDataToRequestTable');
+        menu.addToUi();
+    },
+
+    // eslint-disable-next-line sonarjs/cognitive-complexity
+    pushDataToRequestTable() {
+        const syncingText = 'Syncing...';
+        const invalidRequiredCellList = util.getInvalidRequiredCellList(managerRequiredColumnName);
+
+        if (invalidRequiredCellList.length > 0) {
+            appUI.alert(`You should set follow cells: ${invalidRequiredCellList.join(', ')}.`);
+            return;
+        }
+
+        SpreadsheetApp.getActiveSpreadsheet().toast('Done: 0/3', syncingText, -1);
+
+        // remove rows in requests table
+        managerTable
+            .getAllDataRange()
+            .getValues()
+            .forEach((managerRow: Array<unknown>) => {
+                if (!util.getIsRemoveRow(managerRow)) {
+                    return;
+                }
+
+                const managerRowId = util.stringify(managerRow[rowIdColumnIndex]);
+
+                if (!managerRowId) {
+                    return;
+                }
+
+                const {sheet, rowNumber} = mainTable.getRowDataById(managerRowId, [requestsTableId]);
+                const deletedCells: Array<string> = [];
+
+                managerRow.forEach((managerRowData: unknown, managerColumnIndex: number) => {
+                    const currentColumnNumber = managerColumnIndex + 1;
+                    const cell = sheet?.getRange(rowNumber, currentColumnNumber);
+
+                    const columnLetter = util.columnNumberToString(currentColumnNumber);
+                    const deletedColumns = ['D', 'M', 'N', 'S', 'V'];
+                    let cellValue: Date | string = cell?.getValue();
+
+                    if (cellValue instanceof Date) {
+                        cellValue = Utilities.formatDate(cellValue, moscowGmt, managerTable.mainDateFormat);
+                    }
+
+                    if (deletedColumns.includes(columnLetter)) {
+                        deletedCells.push(cellValue || 'Не указано');
+                    }
+                });
+
+                util.sendNotificationOndDelete(
+                    {
+                        sheetName: util.getSpreadSheetName(requestsTableId),
+                        sheetUrl: util.getSpreadSheetUrl(requestsTableId),
+                    },
+                    deletedCells,
+                    rowNumber
+                );
+
+                sheet?.deleteRow(rowNumber);
+            });
+
+        SpreadsheetApp.getActiveSpreadsheet().toast('Done: 1/3', syncingText, -1);
+
+        // remove rows in manager table
+        managerTable
+            .getAllDataRange()
+            .getValues()
+            .forEach((managerRow: Array<unknown>) => {
+                if (!util.getIsRemoveRow(managerRow)) {
+                    return;
+                }
+
+                const managerRowId = util.stringify(managerRow[rowIdColumnIndex]);
+
+                if (!managerRowId) {
+                    return;
+                }
+
+                const managerRowData = mainTable.getRowDataById(managerRowId, [SpreadsheetApp.getActive().getId()]);
+
+                managerRowData.sheet?.deleteRow(managerRowData.rowNumber);
+            });
+
+        SpreadsheetApp.getActiveSpreadsheet().toast('Done: 2/3', syncingText, -1);
+
+        const addedRows: Array<number> = [];
+        const updatedRows: Array<NotificationMessageType> = [];
+
+        // update rows
+
+        managerTable
+            .getAllDataRange()
+            .getValues()
+            // eslint-disable-next-line complexity
+            .forEach((managerRow: Array<unknown>, managerRowIndex: number) => {
+                if (!util.getIsUpdateOrAdd(managerRow)) {
+                    return;
+                }
+
+                const managerRowId = util.stringify(managerRow[rowIdColumnIndex]);
+
+                if (!managerRowId) {
+                    return;
+                }
+
+                const requestsSheet = requestsTable.getRequestsSheet();
+                const requestsRowData = mainTable.getRowDataById(managerRowId, [requestsTableId]);
+                const hasToMakeNewLine = !requestsRowData.sheet;
+                const requestsRangeRowNumber: number = hasToMakeNewLine
+                    ? requestsSheet.getLastRow() + 1
+                    : requestsRowData.rowNumber;
+                const requestsRangeRowBgColor: string = hasToMakeNewLine ? bgColorDefault : bgColorSynced;
+
+                const managerNameColumn = 2;
+
+                const updatedRow: NotificationMessageType = {
+                    managerName: requestsSheet.getRange(requestsRangeRowNumber, managerNameColumn).getValue(),
+                    rowNumber: requestsRangeRowNumber,
+                    sheetName: util.getSpreadSheetName(requestsTableId),
+                    updatedCells: [],
+                };
+
+                if (hasToMakeNewLine) {
+                    addedRows.push(requestsRangeRowNumber);
+                }
+
+                // eslint-disable-next-line complexity
+                managerRow.forEach((managerRowData: unknown, managerColumnIndex: number) => {
+                    const currentColumnNumber = managerColumnIndex + 1;
+                    const managerRowNumber = managerRowIndex + dataRowBegin;
+                    const isInManagerColumnRange = managerColumnNumberList.includes(currentColumnNumber);
+                    const isInCommonColumnRange = commonColumnNumberList.includes(currentColumnNumber);
+                    const isRowIdColumn = managerColumnIndex === rowIdColumnIndex;
+                    const isNonUpdatableColumn = nonUpdatableColumnNumberList.includes(currentColumnNumber);
+
+                    if (isNonUpdatableColumn || util.getIsSyncedCell(managerRowNumber, currentColumnNumber)) {
+                        return;
+                    }
+
+                    if (isInManagerColumnRange || isInCommonColumnRange || isRowIdColumn) {
+                        const oldCellValue = requestsSheet.getRange(requestsRangeRowNumber, currentColumnNumber);
+
+                        let oldValue: Date | string = oldCellValue.getValue();
+                        let newValue = util.stringify(managerRowData);
+
+                        if (oldValue instanceof Date) {
+                            oldValue = Utilities.formatDate(oldValue, moscowGmt, managerTable.mainDateFormat);
+                        }
+
+                        if (managerRowData instanceof Date) {
+                            newValue = Utilities.formatDate(managerRowData, moscowGmt, managerTable.mainDateFormat);
+                        }
+
+                        if (!hasToMakeNewLine && managerRowData) {
+                            updatedRow.updatedCells.push({
+                                columnName: requestsSheet.getRange(managerNameColumn, currentColumnNumber).getValue(),
+                                newCellContent: newValue,
+                                oldCellContent: oldValue,
+                            });
+                        }
+
+                        oldCellValue.setValue(managerRowData).setBackground(requestsRangeRowBgColor);
+                        SpreadsheetApp.getActiveSheet()
+                            .getRange(managerRowNumber, currentColumnNumber)
+                            .setBackground(bgColorSynced);
+                    }
+                });
+
+                if (updatedRow.updatedCells.length > 0) {
+                    updatedRows.push(updatedRow);
+                }
+            });
+
+        if (addedRows.length > 0) {
+            util.sendNotificationOnAdd(
+                {
+                    end: addedRows[addedRows.length - 1],
+                    start: addedRows[0],
+                },
+                util.getSpreadSheetUrl(requestsTableId)
+            );
+        }
+
+        if (updatedRows.length > 0) {
+            util.sendNotificationOnUpdate(updatedRows, util.getSpreadSheetUrl(requestsTableId));
+        }
+
+        SpreadsheetApp.getActiveSpreadsheet().toast('Done: 3/3', 'Synced!', 2);
+    },
+};
+
 // will call on document open
+// eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars,
 function onOpen() {
     if (util.getIsManagerSpreadsheet()) {
         managerTable.makeUiMenuForManager();
@@ -708,6 +707,7 @@ function onOpen() {
 
 type OnEditEventType = {range: GoogleAppsScript.Spreadsheet.Range; value: unknown};
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars,
 function onEdit(changeData: OnEditEventType) {
     changeData.range.setBackground(bgColorChanged);
     SpreadsheetApp.getActiveSheet()

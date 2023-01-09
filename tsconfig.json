@@ -9,6 +9,7 @@
 
         "strict": true,
         "alwaysStrict": true,
+        "emitDeclarationOnly": false,
         "noImplicitAny": true,
         "strictNullChecks": true,
         "strictFunctionTypes": true,
@@ -38,6 +39,12 @@
         "exactOptionalPropertyTypes": true,
         "emitDecoratorMetadata": false,
         "sourceMap": true
+    },
+    "ts-node": {
+        "compilerOptions": {
+            "module": "CommonJS",
+            "exactOptionalPropertyTypes": false,
+        }
     },
     "exclude": [
         "./dist/",
