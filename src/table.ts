@@ -73,7 +73,11 @@ const util = {
         const alphabet = 'abcdefghijklmnopqrstuvwxyz';
         const list: Array<string> = [...alphabet.toUpperCase()];
 
-        return list[columnNumber - 1] || '!';
+        if (columnNumber > 26) {
+            return 'A' + util.columnNumberToString(columnNumber - 26);
+        }
+
+        return list[columnNumber - 1];
     },
     columnStringToNumber(columnStringRaw: string): number {
         const alphabet = 'abcdefghijklmnopqrstuvwxyz';
@@ -170,7 +174,7 @@ const util = {
     // return invalid rows/cells
     sendNotification(notification: Record<'message' | 'sheetUrl', string>): void {
         UrlFetchApp.fetch(
-            'https://sigirgroup.rocket.chat/hooks/638df9b735f3f95d670d1333/FF4aWkxpQxu6ZeDnu7sWyGqcatrsu9uc2S7raZC6ttXfzuRv',
+            'https://chat.sigirgroup.com/hooks/63a42d41681796c1e50bd542/xxy6a8PxCCEEwom7HPcoQuJhHp953CQkDvQaMBeZideT7sJF',
             {
                 method: 'get',
                 payload: {
