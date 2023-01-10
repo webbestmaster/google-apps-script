@@ -13,7 +13,7 @@ const managerColumnList: Array<string> = ['A', 'B', 'C', 'D', 'E', 'H', 'I', 'J'
 const managerRequiredColumnName: Array<string> = ['B', 'C', 'D', 'I', 'J', 'O', 'P', 'Q', 'S'];
 const managerTableIdList: Array<string> = [managerTable1Id];
 
-const commonColumnList: Array<string> = ['F', 'K', 'O']; //
+const commonColumnList: Array<string> = ['F', 'K', 'O'];
 const rowIdColumnName = 'BF';
 const rowActionColumnName = 'A';
 const nonUpdatableColumnNameList: Array<string> = [rowActionColumnName];
