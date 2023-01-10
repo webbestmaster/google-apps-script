@@ -16,7 +16,8 @@
     "tsc": "tsc -p ./tsconfig.json",
     "tsc:watch": "tsc -p ./tsconfig.json --watch",
     "ts-coverage": "typescript-coverage-report --threshold=100 --strict=true --project ./src",
-    "test:unit": "jest --config='test-unit/config/jest.config.ts' ./src/ --coverage --silent --passWithNoTests"
+    "test:unit": "jest --config='test-unit/config/jest.config.ts' ./test-unit/ --runInBand",
+    "test:unit:watch": "jest --config='test-unit/config/jest.config.ts' ./test-unit/ --runInBand --watch"
   },
   "repository": {
     "type": "git",

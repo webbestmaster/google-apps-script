@@ -73,9 +73,20 @@ const util = {
         const alphabet = 'abcdefghijklmnopqrstuvwxyz';
         const list: Array<string> = [...alphabet.toUpperCase()];
 
+        if (columnNumber < 1) {
+            appUI.alert('[columnNumberToString] value should be 1 or more');
+            throw new Error('[columnNumberToString] value should be 1 or more');
+        }
+
+        if (columnNumber >= 702) {
+            appUI.alert('[columnNumberToString] value should be less then 702');
+            throw new Error('[columnNumberToString] value should be less then 702');
+        }
+
         if (columnNumber > 26) {
-            appUI.alert('[columnNumberToString] value is too big');
-            return '!';
+            const firstNumber = Math.floor(columnNumber / 26);
+
+            return list[firstNumber - 1] + util.columnNumberToString(columnNumber % 26);
         }
 
         return list[columnNumber - 1];
