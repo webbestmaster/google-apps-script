@@ -69,6 +69,7 @@ Logger.log(lastColumnName);
 const appUI: GoogleAppsScript.Base.Ui = SpreadsheetApp.getUi();
 
 const util = {
+    // eslint-disable-next-line complexity
     columnNumberToString(columnNumber: number): string {
         const alphabet = 'abcdefghijklmnopqrstuvwxyz';
         const list: Array<string> = [...alphabet.toUpperCase()];
@@ -81,6 +82,12 @@ const util = {
         if (columnNumber >= 702) {
             appUI.alert('[columnNumberToString] value should be less then 702');
             throw new Error('[columnNumberToString] value should be less then 702');
+        }
+
+        if (columnNumber > 26 && columnNumber % 26 === 0) {
+            const firstNumber = columnNumber / 26;
+
+            return list[firstNumber - 2] + 'Z';
         }
 
         if (columnNumber > 26) {
