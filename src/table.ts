@@ -17,6 +17,11 @@ const commonColumnList: Array<string> = ['F', 'K', 'O'];
 const rowIdColumnName = 'BF';
 const rowActionColumnName = 'A';
 const nonUpdatableColumnNameList: Array<string> = [rowActionColumnName];
+const notDefinedValue = 'Не указано';
+
+const columnsToAdd = new Set(['C', 'D', 'O', 'P']);
+const columnsToDelete = new Set(['D', 'O', 'P', 'U', 'X']);
+const shipmentAddressColumnName = 'Адрес погрузки';
 
 // first row with data
 const dataRowBegin = 3;
@@ -28,6 +33,7 @@ const bgColorChanged = '#ECF87F';
 const bgColorDefault = '#FFFFFF';
 
 const moscowGmt = 'GMT+3';
+const mainDateFormat = 'dd-MM-yyyy';
 
 const allDataRange = `${firstColumnName}${dataRowBegin}:${lastColumnName}`;
 
@@ -46,23 +52,24 @@ type RowDataType = {
     spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet | null;
 };
 
+type AddedCellType = {
+    cellContent: string;
+};
+
 type UpdatedCellType = {
     columnName: string;
     newCellContent: string;
     oldCellContent: string;
 };
 
-type NotificationMessageType = {
-    managerName: string;
+type NotificationMessageType<T> = {
+    cells: Array<T>;
     rowNumber: number;
     sheetName: string;
-    updatedCells: Array<UpdatedCellType>;
+    spreadSheetName: string;
 };
 
-type RowRangesType = {
-    end: number;
-    start: number;
-};
+type NotificationMessageOnUpdateType = NotificationMessageType<UpdatedCellType> & {shipmentAddress: string};
 
 Logger.log(lastColumnName);
 
@@ -207,20 +214,37 @@ const util = {
             }
         );
     },
-    sendNotificationOnAdd(range: RowRangesType, sheetUrl: string): void {
-        const message = `Добавлена новая информация: строки ${range.start}-${range.end}`;
+    sendNotificationOnAdd(addedInfo: Array<NotificationMessageType<AddedCellType>>, sheetUrl: string): void {
+        const message = addedInfo
+            .map(
+                ({spreadSheetName, rowNumber, cells}, index: number) =>
+                    `${index + 1}. ${spreadSheetName}: **Добавлена новая заявка**: ${rowNumber} строка, ` +
+                    cells.map(cell => cell.cellContent).join(', ')
+            )
+            .join('\n');
 
         util.sendNotification({message, sheetUrl});
     },
-    sendNotificationOnUpdate(updates: Array<NotificationMessageType>, sheetUrl: string): void {
+    sendNotificationOnDelete(
+        sheetInfo: {sheetName: string; sheetUrl: string},
+        deletedCells: Array<string>,
+        rowNumber: number
+    ): void {
+        const message = `${sheetInfo.sheetName}: **УДАЛЕНО**: ${rowNumber} строка: ${deletedCells.join('; ')}`;
+
+        util.sendNotification({message, sheetUrl: sheetInfo.sheetUrl});
+    },
+    sendNotificationOnUpdate(updates: Array<NotificationMessageOnUpdateType>, sheetUrl: string): void {
         const message = updates
             .map(
-                ({sheetName, managerName, rowNumber, updatedCells}, index: number) =>
-                    `${index + 1}) ${sheetName}: Внесены изменения: ${
-                        managerName || 'Не указано'
-                    }, ${rowNumber} строка, ` +
-                    updatedCells
-                        .filter(cells => cells.newCellContent && cells.oldCellContent)
+                ({spreadSheetName, sheetName, rowNumber, shipmentAddress, cells}, index: number) =>
+                    `${index + 1}. **${spreadSheetName}: Внесены изменения:** ${
+                        sheetName || notDefinedValue
+                    }, ${rowNumber} строка, ${
+                        cells.some(cell => cell.columnName === shipmentAddressColumnName) ? '' : shipmentAddress
+                    }, ` +
+                    cells
+                        .filter(cell => cell.newCellContent && cell.oldCellContent)
                         .map(
                             ({columnName, newCellContent, oldCellContent}) =>
                                 `${columnName}:  ${oldCellContent} - ${newCellContent}`
@@ -230,15 +254,6 @@ const util = {
             .join('\n');
 
         util.sendNotification({message, sheetUrl});
-    },
-    sendNotificationOndDelete(
-        sheetInfo: {sheetName: string; sheetUrl: string},
-        deletedCells: Array<string>,
-        rowNumber: number
-    ): void {
-        const message = `${sheetInfo.sheetName}: **УДАЛЕНО**: ${rowNumber} строка: ${deletedCells.join('; ')}`;
-
-        util.sendNotification({message, sheetUrl: sheetInfo.sheetUrl});
     },
     stringify(value: unknown): string {
         if (typeof value === 'string') {
@@ -400,9 +415,39 @@ const requestsTable = {
                     return;
                 }
 
-                const managerRowData = mainTable.getRowDataById(requestsRowId, managerTableIdList);
+                const {sheet, rowNumber, spreadsheet} = mainTable.getRowDataById(requestsRowId, managerTableIdList);
+                const deletedCells: Array<string> = [];
 
-                managerRowData.sheet?.deleteRow(managerRowData.rowNumber);
+                if (!spreadsheet) {
+                    return;
+                }
+
+                requestsRow.forEach((requestRowData: unknown, managerColumnIndex: number) => {
+                    const currentColumnNumber = managerColumnIndex + 1;
+                    const cell = sheet?.getRange(rowNumber, currentColumnNumber);
+
+                    const columnLetter = util.columnNumberToString(currentColumnNumber);
+                    let cellValue: Date | string = cell?.getValue();
+
+                    if (cellValue instanceof Date) {
+                        cellValue = Utilities.formatDate(cellValue, moscowGmt, mainDateFormat);
+                    }
+
+                    if (columnsToDelete.has(columnLetter)) {
+                        deletedCells.push(cellValue || notDefinedValue);
+                    }
+                });
+
+                util.sendNotificationOnDelete(
+                    {
+                        sheetName: spreadsheet.getName(),
+                        sheetUrl: util.getSpreadSheetUrl(requestsTableId),
+                    },
+                    deletedCells,
+                    rowNumber
+                );
+
+                sheet?.deleteRow(rowNumber);
             });
 
         SpreadsheetApp.getActiveSpreadsheet().toast('Done: 1/3', syncingText, -1);
@@ -429,7 +474,7 @@ const requestsTable = {
 
         SpreadsheetApp.getActiveSpreadsheet().toast('Done: 2/3', syncingText, -1);
 
-        const updatedRows: Array<NotificationMessageType> = [];
+        const updatedRows: Array<NotificationMessageOnUpdateType> = [];
         let spreadSheetId = '';
         // update rows
 
@@ -466,11 +511,16 @@ const requestsTable = {
 
                 spreadSheetId = managerSpreadSheetId;
 
-                const updatedRow: NotificationMessageType = {
-                    managerName: managerSheet.getRange(requestsRangeRowNumber, managerNameColumn).getValue(),
-                    rowNumber: requestsRangeRowNumber,
-                    sheetName: util.getSpreadSheetName(managerSpreadSheetId),
-                    updatedCells: [],
+                const updatedRow: NotificationMessageOnUpdateType = {
+                    cells: [],
+                    rowNumber: managerRowNumber,
+                    sheetName: managerSheet.getName(),
+                    shipmentAddress: util.stringify(
+                        requestsRow.find(
+                            (row, requestColumnIndex) => util.columnNumberToString(requestColumnIndex + 1) === 'P'
+                        )
+                    ),
+                    spreadSheetName: util.getSpreadSheetName(managerSpreadSheetId),
                 };
 
                 // eslint-disable-next-line complexity
@@ -491,7 +541,7 @@ const requestsTable = {
                     if (isInRequestsColumnRange || isInCommonColumnRange) {
                         const oldCellValue = managerSheet.getRange(managerRowNumber, currentColumnNumber);
 
-                        updatedRow.updatedCells.push({
+                        updatedRow.cells.push({
                             columnName: managerSheet.getRange(managerNameColumn, currentColumnNumber).getValue(),
                             newCellContent: util.stringify(requestsRowData),
                             oldCellContent: oldCellValue.getValue() || '\'Пустое поле\'',
@@ -503,7 +553,7 @@ const requestsTable = {
                             .setBackground(bgColorSynced);
                     }
                 });
-                if (updatedRow.updatedCells.length > 0) {
+                if (updatedRow.cells.length > 0) {
                     updatedRows.push(updatedRow);
                 }
             });
@@ -522,9 +572,6 @@ const managerTable = {
 
         return sheet.getRange(allDataRange);
     },
-
-    mainDateFormat: 'dd-MM-yyyy',
-
     makeUiMenuForManager() {
         const menu: GoogleAppsScript.Base.Menu = appUI.createMenu('Push data to requests table');
 
@@ -567,19 +614,18 @@ const managerTable = {
                     const cell = sheet?.getRange(rowNumber, currentColumnNumber);
 
                     const columnLetter = util.columnNumberToString(currentColumnNumber);
-                    const deletedColumns = ['D', 'M', 'N', 'S', 'V'];
                     let cellValue: Date | string = cell?.getValue();
 
                     if (cellValue instanceof Date) {
-                        cellValue = Utilities.formatDate(cellValue, moscowGmt, managerTable.mainDateFormat);
+                        cellValue = Utilities.formatDate(cellValue, moscowGmt, mainDateFormat);
                     }
 
-                    if (deletedColumns.includes(columnLetter)) {
-                        deletedCells.push(cellValue || 'Не указано');
+                    if (columnsToDelete.has(columnLetter)) {
+                        deletedCells.push(cellValue || notDefinedValue);
                     }
                 });
 
-                util.sendNotificationOndDelete(
+                util.sendNotificationOnDelete(
                     {
                         sheetName: util.getSpreadSheetName(requestsTableId),
                         sheetUrl: util.getSpreadSheetUrl(requestsTableId),
@@ -615,8 +661,8 @@ const managerTable = {
 
         SpreadsheetApp.getActiveSpreadsheet().toast('Done: 2/3', syncingText, -1);
 
-        const addedRows: Array<number> = [];
-        const updatedRows: Array<NotificationMessageType> = [];
+        const addedRows: Array<NotificationMessageType<AddedCellType>> = [];
+        const updatedRows: Array<NotificationMessageOnUpdateType> = [];
 
         // update rows
 
@@ -645,17 +691,26 @@ const managerTable = {
 
                 const managerNameColumn = 2;
 
-                const updatedRow: NotificationMessageType = {
-                    managerName: requestsSheet.getRange(requestsRangeRowNumber, managerNameColumn).getValue(),
+                const updatedRow: NotificationMessageOnUpdateType = {
+                    cells: [],
                     rowNumber: requestsRangeRowNumber,
-                    sheetName: util.getSpreadSheetName(requestsTableId),
-                    updatedCells: [],
+                    sheetName: requestsSheet.getName(),
+                    shipmentAddress: util.stringify(
+                        managerRow.find(
+                            (row, managerColumnIndex) => util.columnNumberToString(managerColumnIndex + 1) === 'P'
+                        )
+                    ),
+                    spreadSheetName: util.getSpreadSheetName(requestsTableId),
                 };
 
-                if (hasToMakeNewLine) {
-                    addedRows.push(requestsRangeRowNumber);
-                }
+                const addedRow: NotificationMessageType<AddedCellType> = {
+                    cells: [],
+                    rowNumber: requestsRangeRowNumber,
+                    sheetName: requestsSheet.getName(),
+                    spreadSheetName: util.getSpreadSheetName(requestsTableId),
+                };
 
+                /* eslint-disable max-statements*/
                 // eslint-disable-next-line complexity
                 managerRow.forEach((managerRowData: unknown, managerColumnIndex: number) => {
                     const currentColumnNumber = managerColumnIndex + 1;
@@ -664,6 +719,8 @@ const managerTable = {
                     const isInCommonColumnRange = commonColumnNumberList.includes(currentColumnNumber);
                     const isRowIdColumn = managerColumnIndex === rowIdColumnIndex;
                     const isNonUpdatableColumn = nonUpdatableColumnNumberList.includes(currentColumnNumber);
+
+                    const columnLetter = util.columnNumberToString(currentColumnNumber);
 
                     if (isNonUpdatableColumn || util.getIsSyncedCell(managerRowNumber, currentColumnNumber)) {
                         return;
@@ -676,15 +733,19 @@ const managerTable = {
                         let newValue = util.stringify(managerRowData);
 
                         if (oldValue instanceof Date) {
-                            oldValue = Utilities.formatDate(oldValue, moscowGmt, managerTable.mainDateFormat);
+                            oldValue = Utilities.formatDate(oldValue, moscowGmt, mainDateFormat);
                         }
 
                         if (managerRowData instanceof Date) {
-                            newValue = Utilities.formatDate(managerRowData, moscowGmt, managerTable.mainDateFormat);
+                            newValue = Utilities.formatDate(managerRowData, moscowGmt, mainDateFormat);
+                        }
+
+                        if (hasToMakeNewLine && columnsToAdd.has(columnLetter)) {
+                            addedRow.cells.push({cellContent: newValue});
                         }
 
                         if (!hasToMakeNewLine && managerRowData) {
-                            updatedRow.updatedCells.push({
+                            updatedRow.cells.push({
                                 columnName: requestsSheet.getRange(managerNameColumn, currentColumnNumber).getValue(),
                                 newCellContent: newValue,
                                 oldCellContent: oldValue,
@@ -698,19 +759,17 @@ const managerTable = {
                     }
                 });
 
-                if (updatedRow.updatedCells.length > 0) {
+                if (updatedRow.cells.length > 0) {
                     updatedRows.push(updatedRow);
+                }
+
+                if (addedRow.cells.length > 0) {
+                    addedRows.push(addedRow);
                 }
             });
 
         if (addedRows.length > 0) {
-            util.sendNotificationOnAdd(
-                {
-                    end: addedRows[addedRows.length - 1],
-                    start: addedRows[0],
-                },
-                util.getSpreadSheetUrl(requestsTableId)
-            );
+            util.sendNotificationOnAdd(addedRows, util.getSpreadSheetUrl(requestsTableId));
         }
 
         if (updatedRows.length > 0) {
