@@ -62,8 +62,8 @@ type UpdatedCellType = {
     oldCellContent: string;
 };
 
-type NotificationMessageType<T> = {
-    cells: Array<T>;
+type NotificationMessageType<CellActionDataType> = {
+    cells: Array<CellActionDataType>;
     rowNumber: number;
     sheetName: string;
     spreadSheetName: string;
